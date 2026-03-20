@@ -138,15 +138,22 @@ Detects:
 
 ## 🧠 AI/ML Integration
 
-### 1. Risk Prediction Model
-*   **Input:** Weather, AQI, location
-*   **Output:** Risk Score
+### 1. Risk Prediction Model (Ensemble Learning)
+Our predictive engine analyzes multi-dimensional data points to forecast potential income disruptions before they occur.
+*   **📡 Inputs:** Real-time satellite weather feeds (precipitation depth, wind speed), AQI (PM2.5/PM10 levels), historical flood maps, and localized logistical traffic data.
+*   **📊 Methodology:** Uses a **Probabilistic Forecast Model** that correlates environmental factors with historical "delivery-drop" metrics in specific micro-markets.
+*   **🎯 Output:** A dynamic **Risk Score (0.0 - 1.0)** assigned to the user's operational zone for the upcoming coverage week.
 
-### 2. Premium Optimization
-*   Dynamic weekly pricing
+### 2. Premium Optimization (Dynamic Pricing Engine)
+DeliverSure employs an algorithmic approach to ensure premiums are both affordable for gig workers and sustainable for the fund.
+*   **💰 Dynamic Adjustments:** Premiums are recalculated weekly based on the predicted risk score. If the probability of disruption in a zone increases (e.g., monsoon onset), the pricing adjusts proportionally.
+*   **📈 Actuarial Balancing:** The engine balances the **Loss Ratio** by analyzing the aggregate risk across the entire user base to maintain system liquidity while preventing over-pricing for low-risk zones.
 
-### 3. Fraud Detection Model
-*   Anomaly detection (Isolation Forest / rules-based hybrid)
+### 3. Fraud Detection Model (Isolation Forest & Pattern Recognition)
+To maintain the integrity of the parametric system, a hybrid AI model protects against adversarial attacks.
+*   **🌲 Isolation Forest (Outlier Detection):** Specifically trained to identify anomalies in user behavioral data (e.g., impossible movement speeds, GPS spoofing, or abnormal claim clusterings).
+*   **🛡️ Rules-based Hybrid:** Combines the unsupervised learning of the Isolation Forest with a deterministic set of "hard-gate" rules (e.g., **Geo-fencing mismatch** or **Multiple claims from identical IMEI hardware**).
+*   **🕸️ Cluster Analysis:** Identifies coordinated fraud rings by detecting synchronized "mass claims" from a localized group that don't correlate with validated weather/disruption data.
 
 ---
 
