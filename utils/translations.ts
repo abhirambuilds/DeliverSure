@@ -1,0 +1,91 @@
+export type Language = 'en' | 'hi' | 'te' | 'ta' | 'kn';
+
+export const LANGUAGES: { id: Language; label: string }[] = [
+  { id: 'en', label: 'English' },
+  { id: 'hi', label: 'Hindi (हिंदी)' },
+  { id: 'te', label: 'Telugu (తెలుగు)' },
+  { id: 'ta', label: 'Tamil (தமிழ்)' },
+  { id: 'kn', label: 'Kannada (ಕನ್ನಡ)' },
+];
+
+export const translations: Record<Language, Record<string, string>> = {
+  en: {
+    welcome: "Welcome back!",
+    subtitle: "Manage your coverage and risks.",
+    activateCoverage: "Activate Coverage",
+    riskAlerts: "Risk Alerts",
+    quickStats: "Quick Stats",
+    activeClaims: "Active Claims",
+    drafts: "Drafts",
+    myCoverage: "My Coverage",
+    totalProtected: "Total Protected Value",
+    activePolicies: "Active Policies",
+    addNewCoverage: "+ Add New Coverage",
+    myClaims: "My Claims",
+    fileNew: "File New",
+  },
+  hi: {
+    welcome: "वापसी पर स्वागत है!",
+    subtitle: "अपने कवरेज और जोखिमों का प्रबंधन करें।",
+    activateCoverage: "कवरेज सक्रिय करें",
+    riskAlerts: "जोखिम अलर्ट",
+    quickStats: "त्वरित आँकड़े",
+    activeClaims: "सक्रिय दावे",
+    drafts: "ड्राफ़्ट",
+    myCoverage: "मेरा कवरेज",
+    totalProtected: "कुल सुरक्षित मूल्य",
+    activePolicies: "सक्रिय नीतियां",
+    addNewCoverage: "+ नया कवरेज जोड़ें",
+    myClaims: "मेरे दावे",
+    fileNew: "नया दर्ज करें",
+  },
+  te: {
+    welcome: "తిరిగి స్వాగతం!",
+    subtitle: "మీ కవరేజ్ మరియు నష్టాలను నిర్వహించండి.",
+    activateCoverage: "కవరేజ్‌ను ప్రారంభించండి",
+    riskAlerts: "ప్రమాద హెచ్చరికలు",
+    quickStats: "శీఘ్ర గణాంకాలు",
+    activeClaims: "క్రియాశీల క్లెయిమ్‌లు",
+    drafts: "డ్రాఫ్ట్‌లు",
+    myCoverage: "నా కవరేజ్",
+    totalProtected: "మొత్తం రక్షిత విలువ",
+    activePolicies: "క్రియాశీల పాలసీలు",
+    addNewCoverage: "+ కొత్త కవరేజ్ జోడించండి",
+    myClaims: "నా క్లెయిమ్‌లు",
+    fileNew: "కొత్తది ఫైల్ చెయ్యండి",
+  },
+  ta: {
+    welcome: "மீண்டும் வருக!",
+    subtitle: "உங்கள் கவரேஜ் மற்றும் அபாயங்களை நிர்வகிக்கவும்.",
+    activateCoverage: "கவரேஜை இயக்கு",
+    riskAlerts: "அபாய எச்சரிக்கைகள்",
+    quickStats: "விரைவான புள்ளிவிவரங்கள்",
+    activeClaims: "செயலில் உள்ள உரிமைகோரல்கள்",
+    drafts: "வரைவுகள்",
+    myCoverage: "என் கவரேஜ்",
+    totalProtected: "மொத்த பாதுகாக்கப்பட்ட மதிப்பு",
+    activePolicies: "செயலில் உள்ள கொள்கைகள்",
+    addNewCoverage: "+ புதிய கவரேஜ் சேர்க்க",
+    myClaims: "என் உரிமைகோரல்கள்",
+    fileNew: "புதிதாக பதிவு செய்",
+  },
+  kn: {
+    welcome: "ಮರಳಿ ಸ್ವಾಗತ!",
+    subtitle: "ನಿಮ್ಮ ಕವರೇಜ್ ಮತ್ತು ಅಪಾಯಗಳನ್ನು ನಿರ್ವಹಿಸಿ.",
+    activateCoverage: "ಕವರೇಜ್ ಸಕ್ರಿಯಗೊಳಿಸಿ",
+    riskAlerts: "ಅಪಾಯದ ಎಚ್ಚರಿಕೆಗಳು",
+    quickStats: "ತ್ವರಿತ ಅಂಕಿಅಂಶಗಳು",
+    activeClaims: "ಸಕ್ರಿಯ ಕ್ಲೈಮ್‌ಗಳು",
+    drafts: "ಕರಡುಗಳು",
+    myCoverage: "ನನ್ನ ಕವರೇಜ್",
+    totalProtected: "ಒಟ್ಟು ರಕ್ಷಿತ ಮೌಲ್ಯ",
+    activePolicies: "ಸಕ್ರಿಯ ನೀತಿಗಳು",
+    addNewCoverage: "+ ಹೊಸ ಕವರೇಜ್ ಸೇರಿಸಿ",
+    myClaims: "ನನ್ನ ಕ್ಲೈಮ್‌ಗಳು",
+    fileNew: "ಹೊಸದನ್ನು ಕಳುಹಿಸಿ",
+  }
+};
+
+export const t = (lang: Language, key: string): string => {
+  return translations[lang]?.[key] || translations['en'][key] || key;
+};
