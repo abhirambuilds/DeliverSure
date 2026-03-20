@@ -300,11 +300,11 @@ During mass events:
 ## 👥 Team Members
 | Name | Role | GitHub |
 | :--- | :--- | :--- |
-| **Revant Lenka** | Team Leader | [@revantlenka](https://github.com/revantlenka) |
+| **Revant Lenka** | Team Leader | [@revantlenka](https://github.com/insane007yt) |
 | **K. Abhiram Reddy** | Member | [@abhirambuilds](https://github.com/abhirambuilds) |
-| **Vunnava Dhatri Sree** | Member | [@dhatrisree](https://github.com/dhatrisree) |
-| **T. Harsha Vardhan** | Member | [@harshavardhan](https://github.com/harshavardhan) |
-| **M. Sathvik Sai Srinivas** | Member | [@sathviksai](https://github.com/sathviksai) |
+| **Vunnava Dhatri Sree** | Member | [@dhatrisree](https://github.com/vdhatrisree) |
+| **T. Harsha Vardhan** | Member | [@harshavardhan](https://github.com/Harsha-2603) |
+| **M. Sathvik Sai Srinivas** | Member | [@sathviksai](https://github.com/sathviksaisrinivas) |
 
 ---
 
