@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿signup_tsx = '''import React, { useState } from "react";
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from "react-native";
 import { useRouter, Redirect } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
@@ -134,3 +134,8 @@ const styles = StyleSheet.create({
   footerText: { color: "#a0a0a0", fontSize: 15 },
   footerLink: { color: "#10b981", fontSize: 15, fontWeight: "bold" },
 });
+'''
+
+with open("app/auth/signup.tsx", "w", encoding="utf-8", newline="\n") as f:
+    f.write(signup_tsx)
+print("signup.tsx done")

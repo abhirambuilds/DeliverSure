@@ -1,4 +1,104 @@
-import React, { useState } from 'react';
+﻿import os
+
+auth_context = r"""import React, { createContext, useContext, useState, useEffect } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import { authAPI, profileAPI } from '@/src/services/api';
+import { Language } from '@/utils/translations';
+
+type Role = 'admin' | 'user' | null;
+
+export interface CoverageOption {
+  id: string; name: string; description: string; price: number; icon: string;
+}
+export interface Claim {
+  id: string; title: string; amount: string; date: string;
+  status: 'Under Review' | 'Approved & Paid' | 'Denied - Below Deductible';
+  proofImage?: string | null;
+}
+interface User {
+  email: string; name?: string; phone?: string; dob?: string; gender?: string;
+  activeCoverages?: CoverageOption[]; claims?: Claim[];
+}
+interface AuthContextType {
+  user: User | null; role: Role; token: string | null; language: Language;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void; updateUser: (data: Partial<User>) => void;
+  addCoverage: (coverage: CoverageOption) => void; addClaim: (claim: Claim) => void;
+  changeLanguage: (lang: Language) => void; isRideActive: boolean;
+  setIsRideActive: (active: boolean) => void; hasPromptedLocation: boolean;
+  setHasPromptedLocation: (val: boolean) => void;
+}
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<Role>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [language, setLanguage] = useState<Language>('en');
+  const [isRideActive, setIsRideActive] = useState(false);
+  const [hasPromptedLocation, setHasPromptedLocation] = useState(false);
+
+  useEffect(() => {
+    const restore = async () => {
+      const savedToken = await SecureStore.getItemAsync('userToken');
+      const savedRole = await SecureStore.getItemAsync('userRole');
+      if (savedToken) {
+        setToken(savedToken);
+        setRole((savedRole as Role) || 'user');
+        try {
+          const res = await profileAPI.getMe();
+          const profile = res.data.profile;
+          setUser({ email: profile.full_name, name: profile.full_name });
+        } catch {}
+      }
+    };
+    restore();
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    const res = await authAPI.login(email, password);
+    const { access_token } = res.data;
+    const userRole: Role = email === 'admin@ws.com' ? 'admin' : 'user';
+    await SecureStore.setItemAsync('userToken', access_token);
+    await SecureStore.setItemAsync('userRole', userRole);
+    setToken(access_token); setRole(userRole);
+    setUser({ email }); setHasPromptedLocation(false);
+  };
+
+  const logout = async () => {
+    await SecureStore.deleteItemAsync('userToken');
+    await SecureStore.deleteItemAsync('userRole');
+    setUser(null); setRole(null); setToken(null);
+  };
+
+  const updateUser = (data: Partial<User>) => { if (user) setUser({ ...user, ...data }); };
+  const addCoverage = (coverage: CoverageOption) => {
+    if (user) {
+      const current = user.activeCoverages || [];
+      if (!current.find(c => c.id === coverage.id))
+        setUser({ ...user, activeCoverages: [...current, coverage] });
+    }
+  };
+  const addClaim = (claim: Claim) => {
+    if (user) setUser({ ...user, claims: [claim, ...(user.claims || [])] });
+  };
+  const changeLanguage = (lang: Language) => setLanguage(lang);
+
+  return (
+    <AuthContext.Provider value={{ user, role, token, language, login, logout, updateUser, addCoverage, addClaim, changeLanguage, isRideActive, setIsRideActive, hasPromptedLocation, setHasPromptedLocation }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
+  return context;
+}
+"""
+
+login_tsx = r"""import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter, Redirect } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
@@ -82,3 +182,12 @@ const styles = StyleSheet.create({
   footerText: { color: '#a0a0a0', fontSize: 15 },
   footerLink: { color: '#3b82f6', fontSize: 15, fontWeight: 'bold' },
 });
+"""
+
+with open('context/AuthContext.tsx', 'w', encoding='utf-8', newline='\n') as f:
+    f.write(auth_context)
+print('AuthContext.tsx done')
+
+with open('app/auth/login.tsx', 'w', encoding='utf-8', newline='\n') as f:
+    f.write(login_tsx)
+print('login.tsx done')
