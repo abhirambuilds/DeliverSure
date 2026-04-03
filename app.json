@@ -9,10 +9,28 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.weathershield.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "WeatherShield needs your location to provide real-time weather protection and automated claims.",
+        "NSLocationAlwaysUsageDescription": "WeatherShield needs your location to monitor weather conditions even when the app is in the background.",
+        "NSCameraUsageDescription": "WeatherShield needs access to your camera for profile pictures and claim evidence.",
+        "NSPhotoLibraryUsageDescription": "WeatherShield needs access to your photo library to upload claim evidence."
+      }
     },
     "android": {
-      "package": "com.anonymous.weathershieldapp",
+      "package": "com.weathershield.app",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "POST_NOTIFICATIONS"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -40,11 +58,24 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow WeatherShield to use your location for automated insurance claims."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow WeatherShield to access your photos to attach evidence to claims.",
+          "cameraPermission": "Allow WeatherShield to use your camera for claim evidence."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": false
     },
     "extra": {
       "router": {},
