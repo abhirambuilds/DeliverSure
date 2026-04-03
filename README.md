@@ -9,7 +9,7 @@
 
 ## 📱 Live Demo
 **Download the Android APK to test the application:**
-👉 [DeliverSure APK (Google Drive)](https://drive.google.com/drive/folders/1n5I-Q4gBKzcy-uDB7auawtzzPGDN7uL8?usp=drive_link)
+👉 [DeliverSure APK (Google Drive)](https://drive.google.com/file/d/18-qw8exnpMfsTQ1oOJ1Pp1-Hmg1lXCBX/view?usp=drive_link)
 
 ## 🧠 Overview
 **DeliverSure** is an AI-powered parametric insurance platform designed to protect gig delivery workers (**Zomato, Swiggy, Amazon, etc.**) from income loss caused by external disruptions such as extreme weather, pollution, or city restrictions.
