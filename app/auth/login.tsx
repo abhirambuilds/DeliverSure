@@ -23,7 +23,8 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       await login(email, password);
-      router.replace(email === 'admin@ws.com' ? '/admin/dashboard' : '/(tabs)');
+      // Wait for state to settle or just let the top-level Redirect handles it?
+      // Top-level Redirect will handle it once state is updated.
     } catch (err: any) {
       setErrorMsg(err?.response?.data?.detail || 'Invalid credentials');
     } finally {
@@ -64,21 +65,21 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#121212' },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
   scrollContainer: { flexGrow: 1, justifyContent: 'center', padding: 24 },
   headerContainer: { marginBottom: 40 },
-  title: { fontSize: 32, fontWeight: 'bold', color: '#ffffff', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#a0a0a0' },
+  title: { fontSize: 32, fontWeight: 'bold', color: '#0F172A', marginBottom: 8 },
+  subtitle: { fontSize: 16, color: '#64748B' },
   formContainer: { marginBottom: 32 },
   inputGroup: { marginBottom: 20 },
-  label: { color: '#ffffff', fontSize: 14, fontWeight: '600', marginBottom: 8 },
-  input: { backgroundColor: '#1e1e1e', borderWidth: 1, borderColor: '#333333', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 18, color: '#ffffff', fontSize: 16 },
-  loginButton: { backgroundColor: '#3b82f6', borderRadius: 16, paddingVertical: 18, alignItems: 'center', justifyContent: 'center', marginTop: 12, minHeight: 60 },
-  loginButtonDisabled: { backgroundColor: '#60a5fa' },
-  errorContainer: { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.5)', borderRadius: 12, padding: 12, marginBottom: 24 },
-  errorText: { color: '#ef4444', fontSize: 14, textAlign: 'center' },
-  loginButtonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
+  label: { color: '#0F172A', fontSize: 16, fontWeight: '600', marginBottom: 8 },
+  input: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 16, color: '#0F172A', fontSize: 16 },
+  loginButton: { backgroundColor: '#16A34A', borderRadius: 12, height: 56, alignItems: 'center', justifyContent: 'center', marginTop: 12, boxShadow: '0px 4px 8px rgba(22, 163, 74, 0.2)' },
+  loginButtonDisabled: { backgroundColor: '#CBD5E1' },
+  errorContainer: { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FCA5A5', borderRadius: 12, padding: 12, marginBottom: 24 },
+  errorText: { color: '#EF4444', fontSize: 14, textAlign: 'center', fontWeight: 'bold' },
+  loginButtonText: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' },
   footerContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 'auto', paddingBottom: 20 },
-  footerText: { color: '#a0a0a0', fontSize: 15 },
-  footerLink: { color: '#3b82f6', fontSize: 15, fontWeight: 'bold' },
+  footerText: { color: '#64748B', fontSize: 16 },
+  footerLink: { color: '#16A34A', fontSize: 16, fontWeight: 'bold' },
 });

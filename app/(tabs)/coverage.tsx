@@ -15,10 +15,18 @@ export default function CoverageScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/policies/active')
-      .then(res => setPolicy(res.data.policy || null))
-      .catch(() => setPolicy(null))
-      .finally(() => setLoading(false));
+    const fetchPolicy = async () => {
+      try {
+        const res = await api.get('/policies/active');
+        setPolicy(res.data.policy || null);
+      } catch (err) {
+        console.error("Fetch policy error:", err);
+        setPolicy(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPolicy();
   }, []);
 
   return (
@@ -67,24 +75,24 @@ export default function CoverageScreen() {
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  contentContainer: { padding: 24, paddingTop: 60, paddingBottom: 40 },
+  contentContainer: { padding: 20, paddingTop: 60, paddingBottom: 40 },
   header: { fontSize: 32, fontWeight: "bold", color: colors.text, marginBottom: 24 },
-  summaryCard: { backgroundColor: colors.primary, borderRadius: 16, padding: 24, marginBottom: 32 },
-  summaryLabel: { color: "rgba(255,255,255,0.8)", fontSize: 16, marginBottom: 8 },
-  summaryValue: { color: "#ffffff", fontSize: 36, fontWeight: "bold" },
-  sectionTitle: { fontSize: 20, fontWeight: "600", color: colors.text, marginBottom: 16 },
-  card: { backgroundColor: colors.card, borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  summaryCard: { backgroundColor: colors.primary, borderRadius: 14, padding: 24, marginBottom: 32, boxShadow: `0px 4px 8px ${colors.primary}33` },
+  summaryLabel: { color: "rgba(255,255,255,0.9)", fontSize: 16, fontWeight: '600', marginBottom: 8 },
+  summaryValue: { color: "#FFFFFF", fontSize: 40, fontWeight: "bold" },
+  sectionTitle: { fontSize: 20, fontWeight: "bold", color: colors.text, marginBottom: 16 },
+  card: { backgroundColor: colors.card, borderRadius: 14, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: colors.border, boxShadow: '0px 2px 6px rgba(0,0,0,0.05)' },
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
   cardTitle: { fontSize: 18, fontWeight: "bold", color: colors.text },
-  badgeActive: { backgroundColor: "rgba(16, 185, 129, 0.2)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  badgeTextActive: { color: colors.success, fontSize: 12, fontWeight: "bold" },
-  policyDetail: { color: colors.textMuted, fontSize: 14, marginBottom: 4 },
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: 12 },
-  flexRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
-  label: { color: colors.textMuted, fontSize: 14 },
-  value: { color: colors.text, fontSize: 14, fontWeight: "600" },
-  addButton: { marginTop: 16, paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.primary, alignItems: "center" },
-  addButtonText: { color: colors.primary, fontSize: 16, fontWeight: "bold" },
-  emptyState: { padding: 24, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, alignItems: "center", marginBottom: 16 },
-  emptyStateText: { color: colors.textMuted, fontSize: 14, textAlign: "center" },
+  badgeActive: { backgroundColor: "#DCFCE7", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  badgeTextActive: { color: colors.success, fontSize: 14, fontWeight: "bold" },
+  policyDetail: { color: colors.textMuted, fontSize: 16, marginBottom: 6 },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: 16 },
+  flexRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
+  label: { color: colors.textMuted, fontSize: 16 },
+  value: { color: colors.text, fontSize: 16, fontWeight: "600" },
+  addButton: { marginTop: 16, height: 56, borderRadius: 12, borderWidth: 2, borderColor: colors.primary, alignItems: "center", justifyContent: 'center' },
+  addButtonText: { color: colors.primary, fontSize: 18, fontWeight: "bold" },
+  emptyState: { padding: 32, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, alignItems: "center", marginBottom: 16 },
+  emptyStateText: { color: colors.textMuted, fontSize: 16, textAlign: "center" },
 });

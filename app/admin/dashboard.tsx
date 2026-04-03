@@ -6,25 +6,32 @@ import { Feather } from "@expo/vector-icons";
 import api from "@/src/services/api";
 
 const UI = {
-  primary: '#0BDC84',
-  bg: '#0A0A0A',
-  surface: '#1A1A1A',
-  text: '#FFFFFF',
-  textSecondary: '#B0B0B0',
+  primary: '#16A34A',
+  bg: '#F8FAFC',
+  surface: '#FFFFFF',
+  text: '#0F172A',
+  textSecondary: '#64748B',
 };
 
 export default function AdminDashboardScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/admin/dashboard")
-      .then(res => setStats(res.data))
-      .catch(err => console.log("Admin fetch error"))
-      .finally(() => setLoading(false));
+    const fetchStats = async () => {
+      try {
+        const res = await api.get("/admin/dashboard");
+        setStats(res.data);
+      } catch (err) {
+        console.error("Admin dashboard fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
   }, []);
 
   const handleLogout = () => {
@@ -38,7 +45,7 @@ export default function AdminDashboardScreen() {
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.title}>Admin Panel</Text>
-          <Text style={styles.subtitle}>Overview</Text>
+          <Text style={styles.subtitle}>System Overview</Text>
         </View>
         <TouchableOpacity style={styles.profileBtn} onPress={() => setModalVisible(true)}>
           <Feather name="user" size={24} color={UI.text} />
@@ -46,11 +53,13 @@ export default function AdminDashboardScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator color={UI.primary} size="large" style={{ marginTop: 60 }} />
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator color={UI.primary} size="large" />
+        </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll}>
           <View style={styles.cardFull}>
-            <Feather name="shield" size={32} color={UI.primary} style={{ marginBottom: 12 }} />
+            <Feather name="shield" size={40} color={UI.primary} style={{ marginBottom: 12 }} />
             <Text style={styles.cardLabel}>Active Policies</Text>
             <Text style={styles.cardBigVal}>{stats?.active_policies ?? 0}</Text>
           </View>
@@ -62,7 +71,7 @@ export default function AdminDashboardScreen() {
             </View>
             <View style={styles.cardHalf}>
               <Text style={styles.cardLabel}>Pending Review</Text>
-              <Text style={[styles.cardVal, { color: '#FFA500' }]}>{stats?.pending_claims ?? 0}</Text>
+              <Text style={[styles.cardVal, { color: '#F59E0B' }]}>{stats?.pending_claims ?? 0}</Text>
             </View>
           </View>
 
@@ -73,27 +82,32 @@ export default function AdminDashboardScreen() {
             </View>
             <View style={styles.cardHalf}>
               <Text style={styles.cardLabel}>Disruptions</Text>
-              <Text style={[styles.cardVal, { color: '#FF4D4D' }]}>{stats?.total_disruptions ?? 0}</Text>
+              <Text style={[styles.cardVal, { color: '#EF4444' }]}>{stats?.total_disruptions ?? 0}</Text>
             </View>
           </View>
         </ScrollView>
       )}
 
       {/* Admin Menu Modal */}
-      <Modal animationType="slide" transparent={true} visible={modalVisible}>
+      <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Menu</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <Text style={styles.modalTitle}>Admin Menu</Text>
+                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                    <Feather name="x" size={24} color={UI.textSecondary} />
+                </TouchableOpacity>
+            </View>
             <View style={styles.menuRow}>
-              <Text style={styles.menuLabel}>Email</Text>
+              <Text style={styles.menuLabel}>Admin Email</Text>
               <Text style={styles.menuValue}>{user?.email || "admin@ws.com"}</Text>
             </View>
             <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-              <Feather name="log-out" size={20} color="#FF4D4D" style={{ marginRight: 12 }} />
-              <Text style={styles.logoutBtnText}>Log Out</Text>
+              <Feather name="log-out" size={20} color="#EF4444" style={{ marginRight: 12 }} />
+              <Text style={styles.logoutBtnText}>Log Out System</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-              <Text style={styles.cancelBtnText}>Close</Text>
+              <Text style={styles.cancelBtnText}>Back to Dashboard</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -108,22 +122,22 @@ const styles = StyleSheet.create({
   headerText: { justifyContent: 'center' },
   title: { fontSize: 32, fontWeight: 'bold', color: UI.text },
   subtitle: { fontSize: 16, color: UI.textSecondary, marginTop: 4 },
-  profileBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: UI.surface, justifyContent: 'center', alignItems: 'center' },
+  profileBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: UI.surface, justifyContent: 'center', alignItems: 'center', boxShadow: '0px 2px 6px rgba(0,0,0,0.1)' },
   scroll: { paddingHorizontal: 24, paddingBottom: 40 },
-  cardFull: { backgroundColor: UI.surface, borderRadius: 16, padding: 24, marginBottom: 16, alignItems: 'center' },
-  cardLabel: { color: UI.textSecondary, fontSize: 16, marginBottom: 8 },
-  cardBigVal: { color: UI.text, fontSize: 48, fontWeight: 'bold' },
+  cardFull: { backgroundColor: UI.surface, borderRadius: 16, padding: 32, marginBottom: 16, alignItems: 'center', boxShadow: '0px 2px 6px rgba(0,0,0,0.1)' },
+  cardLabel: { color: UI.textSecondary, fontSize: 16, marginBottom: 8, fontWeight: '600' },
+  cardBigVal: { color: UI.text, fontSize: 56, fontWeight: 'bold' },
   row: { flexDirection: 'row', gap: 16, marginBottom: 16 },
-  cardHalf: { flex: 1, backgroundColor: UI.surface, borderRadius: 16, padding: 20 },
+  cardHalf: { flex: 1, backgroundColor: UI.surface, borderRadius: 16, padding: 20, boxShadow: '0px 2px 6px rgba(0,0,0,0.1)' },
   cardVal: { color: UI.text, fontSize: 32, fontWeight: 'bold' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: UI.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
-  modalTitle: { fontSize: 24, fontWeight: 'bold', color: UI.text, marginBottom: 24 },
-  menuRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 32 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+  modalTitle: { fontSize: 24, fontWeight: 'bold', color: UI.text },
+  menuRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 32, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   menuLabel: { color: UI.textSecondary, fontSize: 18 },
   menuValue: { color: UI.text, fontSize: 18, fontWeight: 'bold' },
-  logoutBtn: { flexDirection: 'row', backgroundColor: UI.bg, padding: 16, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12, borderWidth: 1, borderColor: '#FF4D4D' },
-  logoutBtnText: { color: '#FF4D4D', fontSize: 18, fontWeight: 'bold' },
-  cancelBtn: { padding: 16, borderRadius: 12, backgroundColor: UI.bg, justifyContent: 'center', alignItems: 'center' },
+  logoutBtn: { flexDirection: 'row', backgroundColor: '#FEF2F2', height: 56, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  logoutBtnText: { color: '#EF4444', fontSize: 18, fontWeight: 'bold' },
+  cancelBtn: { height: 56, borderRadius: 12, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
   cancelBtnText: { color: UI.text, fontSize: 18, fontWeight: 'bold' }
 });

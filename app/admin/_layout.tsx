@@ -20,9 +20,9 @@ export default function AdminTabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { backgroundColor: '#121212', borderTopColor: '#333333' },
-        tabBarActiveTintColor: '#3b82f6',
-        tabBarInactiveTintColor: '#888888',
+        tabBarStyle: { backgroundColor: '#FFFFFF', borderTopColor: '#E2E8F0' },
+        tabBarActiveTintColor: '#2563EB',
+        tabBarInactiveTintColor: '#64748B',
       }}>
       <Tabs.Screen
         name="dashboard"

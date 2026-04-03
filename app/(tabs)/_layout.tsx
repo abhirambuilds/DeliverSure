@@ -7,7 +7,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/context/AuthContext';
-import LocationPermissionModal from '@/components/LocationPermissionModal';
+// import LocationPermissionModal from '@/components/LocationPermissionModal';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -79,7 +79,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
-    <LocationPermissionModal />
     </>
   );
 }

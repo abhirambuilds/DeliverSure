@@ -19,37 +19,23 @@ export interface ThemeColors {
   headerRow: string;
 }
 
-const darkColors: ThemeColors = {
-  background: '#000000',
-  text: '#ffffff',
-  card: '#1c1c1e',
-  border: '#333333',
-  textMuted: '#a0a0a0',
-  primary: '#3b82f6',
-  success: '#10b981',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-  overlay: 'rgba(0,0,0,0.7)',
-  cardIconBg: 'rgba(255,255,255,0.05)',
-  cardIconBgSelected: 'rgba(59, 130, 246, 0.1)',
-  headerRow: '#1a1a1a',
+const lightColors: ThemeColors = {
+  background: '#F8FAFC',
+  text: '#0F172A',
+  card: '#FFFFFF',
+  border: '#E2E8F0',
+  textMuted: '#64748B',
+  primary: '#16A34A',
+  success: '#16A34A',
+  warning: '#F59E0B',
+  danger: '#EF4444',
+  overlay: 'rgba(15, 23, 42, 0.4)',
+  cardIconBg: '#F1F5F9',
+  cardIconBgSelected: '#DCFCE7',
+  headerRow: '#FFFFFF',
 };
 
-const lightColors: ThemeColors = {
-  background: '#ffffff',
-  text: '#000000',
-  card: '#f2f2f7',
-  border: '#e5e5ea',
-  textMuted: '#666666',
-  primary: '#3b82f6',
-  success: '#10b981',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-  overlay: 'rgba(0,0,0,0.4)',
-  cardIconBg: 'rgba(0,0,0,0.05)',
-  cardIconBgSelected: 'rgba(59, 130, 246, 0.1)',
-  headerRow: '#f2f2f7',
-};
+const darkColors: ThemeColors = lightColors;
 
 interface ThemeContextType {
   theme: ThemeType;
@@ -61,27 +47,20 @@ interface ThemeContextType {
 export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function AppThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<ThemeType>('dark'); // Default dark
+  const [theme, setTheme] = useState<ThemeType>('light');
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem('appTheme').then(savedTheme => {
-      if (savedTheme === 'light' || savedTheme === 'dark') {
-        setTheme(savedTheme);
-      }
-      setIsLoaded(true);
-    });
+    setIsLoaded(true);
   }, []);
 
   const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    AsyncStorage.setItem('appTheme', newTheme);
+    // Disabled for this redesign
   };
 
   if (!isLoaded) return null;
 
-  const colors = theme === 'dark' ? darkColors : lightColors;
+  const colors = lightColors;
 
   return (
     <ThemeContext.Provider value={{ theme, colors, toggleTheme, isDark: theme === 'dark' }}>

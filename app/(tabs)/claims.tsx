@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import api from '@/src/services/api';
 
 const UI = {
-  primary: '#0BDC84',
-  bg: '#0A0A0A',
-  surface: '#1A1A1A',
-  text: '#FFFFFF',
-  textSecondary: '#B0B0B0',
-  danger: '#FF4D4D',
-  warning: '#FFA500',
+  primary: '#16A34A',
+  bg: '#F8FAFC',
+  surface: '#FFFFFF',
+  text: '#0F172A',
+  textSecondary: '#64748B',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  border: '#E2E8F0',
 };
 
 export default function ClaimsScreen() {
@@ -20,16 +21,24 @@ export default function ClaimsScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/claims/')
-      .then(res => setClaims(res.data.claims || []))
-      .catch(() => setClaims([]))
-      .finally(() => setLoading(false));
+    const fetchClaims = async () => {
+      try {
+        const res = await api.get('/claims/');
+        setClaims(res.data.claims || []);
+      } catch (err) {
+        console.error("Fetch claims error:", err);
+        setClaims([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchClaims();
   }, []);
 
   const getStatusDetails = (status: any) => {
     const s = status?.toLowerCase() || '';
     if (s === "paid") return { color: UI.primary, icon: 'check-circle', label: 'Paid' };
-    if (s === "approved") return { color: '#3B82F6', icon: 'check', label: 'Approved' };
+    if (s === "approved") return { color: '#2563EB', icon: 'check', label: 'Approved' };
     if (s === "pending") return { color: UI.warning, icon: 'clock', label: 'Pending' };
     return { color: UI.danger, icon: 'x-circle', label: 'Rejected' };
   };
@@ -78,18 +87,18 @@ export default function ClaimsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: UI.bg },
-  headerRow: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 16, backgroundColor: UI.bg },
+  headerRow: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16, backgroundColor: UI.bg },
   header: { fontSize: 32, fontWeight: "bold", color: UI.text },
-  contentContainer: { padding: 24, paddingBottom: 100 },
-  card: { backgroundColor: UI.surface, borderRadius: 16, padding: 20, marginBottom: 16 },
+  contentContainer: { padding: 20, paddingBottom: 100 },
+  card: { backgroundColor: UI.surface, borderRadius: 14, padding: 20, marginBottom: 16, borderBottomWidth: 1, borderBottomColor: UI.border, boxShadow: '0px 2px 6px rgba(0,0,0,0.05)' },
   cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   claimTitle: { fontSize: 20, fontWeight: "bold", color: UI.text },
   claimAmount: { fontSize: 24, fontWeight: "bold", color: UI.text },
   cardMiddle: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20 },
-  claimId: { color: UI.textSecondary, fontSize: 14, fontFamily: 'monospace' },
-  claimDate: { color: UI.textSecondary, fontSize: 14 },
+  claimId: { color: UI.textSecondary, fontSize: 15, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
+  claimDate: { color: UI.textSecondary, fontSize: 15 },
   statusBox: { flexDirection: "row", alignItems: "center", justifyContent: "center", padding: 12, borderRadius: 12, borderWidth: 1 },
-  statusText: { fontWeight: "bold", fontSize: 16, marginLeft: 8 },
-  emptyState: { padding: 40, backgroundColor: UI.surface, borderRadius: 16, alignItems: "center", marginTop: 40 },
+  statusText: { fontWeight: "bold", fontSize: 17, marginLeft: 8 },
+  emptyState: { padding: 40, backgroundColor: UI.surface, borderRadius: 14, alignItems: "center", marginTop: 40, boxShadow: '0px 2px 6px rgba(0,0,0,0.05)' },
   emptyText: { color: UI.textSecondary, fontSize: 18, marginTop: 16, fontWeight: "bold" }
 });

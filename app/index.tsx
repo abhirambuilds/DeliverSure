@@ -16,9 +16,9 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <Feather name="cloud-lightning" size={80} color="#3b82f6" />
-      <Text style={styles.title}>WeatherShield AI</Text>
-      <Text style={styles.subtitle}>Smart Climate Protection</Text>
+      <Feather name="shield" size={80} color="#16A34A" />
+      <Text style={styles.title}>DeliverSure</Text>
+      <Text style={styles.subtitle}>Protecting your daily earnings</Text>
     </View>
   );
 }
@@ -26,20 +26,20 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
-    fontSize: 32,
+    fontSize: 40,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#0F172A',
     marginTop: 24,
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#a0a0a0',
-    letterSpacing: 1,
+    fontSize: 18,
+    color: '#64748B',
+    fontWeight: '500',
   },
 });

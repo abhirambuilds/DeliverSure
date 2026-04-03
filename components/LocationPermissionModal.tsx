@@ -47,7 +47,7 @@ export default function LocationPermissionModal() {
       visible={isVisible}
       onRequestClose={handleNoThanks}
     >
-      <BlurView intensity={20} tint="dark" style={styles.overlay}>
+      <BlurView intensity={20} tint="light" style={styles.overlay}>
         <View style={styles.modalContent}>
           <Text style={styles.title}>Enable Location Accuracy</Text>
           <Text style={styles.description}>
@@ -78,34 +78,34 @@ export default function LocationPermissionModal() {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: '#FFFFFF',
     width: '85%',
     maxWidth: 400,
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 24,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.1,
     shadowRadius: 20,
     elevation: 8,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: '#E2E8F0',
   },
   title: {
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 12,
     textAlign: 'center',
   },
   description: {
-    color: '#A0A0A0',
+    color: '#64748B',
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 28,
@@ -120,27 +120,28 @@ const styles = StyleSheet.create({
   noThanksButton: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#444444',
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#F1F5F9',
   },
   noThanksText: {
-    color: '#A0A0A0',
+    color: '#64748B',
     fontSize: 16,
     fontWeight: '600',
   },
   turnOnButton: {
     flex: 1,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#16A34A',
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3b82f6',
+    shadowColor: '#16A34A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },

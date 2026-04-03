@@ -3,7 +3,7 @@ import storage from '@/utils/storage';
 import api from '@/src/services/api';
 import { Language } from '@/utils/translations';
 
-type Role = 'admin' | 'user' | null;
+type Role = 'admin' | 'agent' | null;
 
 export interface CoverageOption {
   id: string; name: string; description: string; price: number; icon: string;
@@ -16,6 +16,7 @@ export interface Claim {
 interface User {
   email: string; name?: string; phone?: string; dob?: string; gender?: string;
   activeCoverages?: CoverageOption[]; claims?: Claim[];
+  role?: Role;
 }
 interface AuthContextType {
   user: User | null; role: Role; token: string | null; language: Language;
@@ -42,40 +43,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const savedRole = await storage.getItem('userRole');
       if (savedToken) {
         setToken(savedToken);
-        setRole((savedRole as Role) || 'user');
+        setRole((savedRole as Role) || 'agent');
         try {
           const res = await api.get('/profiles/me');
           const profile = res.data.profile;
+          const userRole = profile.role || 'agent';
           
+          setRole(userRole as Role);
+          await storage.setItem('userRole', userRole);
+
           let fetchedCoverages: any[] = [];
           try {
-            const api = (await import('@/src/services/api')).default;
             const polRes = await api.get('/policies/active');
             if (polRes.data?.policy) {
               fetchedCoverages = [{ id: polRes.data.policy.id, name: 'Active Protection', price: polRes.data.policy.weekly_premium, icon: 'shield' }];
             }
-          } catch (e) { console.log('No active policy found at login') }
+          } catch (e) { console.log('No active policy found at restore') }
           
-          setUser({ email: profile.full_name, name: profile.full_name, activeCoverages: fetchedCoverages });
-        } catch {}
+          setUser({ 
+            email: profile.email || profile.full_name, 
+            name: profile.full_name, 
+            activeCoverages: fetchedCoverages,
+            role: userRole as Role
+          });
+        } catch (err) {
+          console.error("Session restore error:", err);
+          logout();
+        }
       }
     };
     restore();
   }, []);
 
   const login = async (email: string, password: string) => {
-    const res = await api.post('/auth/login', { email, password });
-    const { access_token } = res.data;
-    const userRole: Role = email === 'admin@ws.com' ? 'admin' : 'user';
-    await storage.setItem('userToken', access_token);
-    await storage.setItem('userRole', userRole);
-    setToken(access_token); setRole(userRole);
-    setUser({ email }); setHasPromptedLocation(false);
+    try {
+      const res = await api.post('/auth/login', { email, password });
+      const { access_token, user_id } = res.data;
+      
+      await storage.setItem('userToken', access_token);
+      setToken(access_token);
+
+      // Fetch profile to get real role
+      const profRes = await api.get('/profiles/me');
+      const profile = profRes.data.profile;
+      const userRole = profile.role || 'agent';
+
+      await storage.setItem('userRole', userRole);
+      setRole(userRole as Role);
+      
+      setUser({ 
+        email: profile.email || profile.full_name, 
+        name: profile.full_name,
+        role: userRole as Role
+      });
+      
+      setHasPromptedLocation(false);
+    } catch (err: any) {
+      console.error("Login Error:", err);
+      throw err;
+    }
   };
 
   const logout = async () => {
-    await storage.removeItem('userToken');
-    await storage.removeItem('userRole');
+    try {
+      await storage.removeItem('userToken');
+      await storage.removeItem('userRole');
+    } catch (e) { console.error("Logout storage error", e); }
     setUser(null); setRole(null); setToken(null);
   };
 

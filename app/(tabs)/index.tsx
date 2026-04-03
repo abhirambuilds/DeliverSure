@@ -14,25 +14,21 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 const UI = {
-  primary: '#0BDC84',
-  bg: '#0A0A0A',
-  surface: '#1A1A1A',
-  text: '#FFFFFF',
-  textSecondary: '#B0B0B0',
-  danger: '#FF4D4D',
-  warning: '#FFA500',
+  primary: '#16A34A',
+  bg: '#F8FAFC',
+  surface: '#FFFFFF',
+  text: '#0F172A',
+  textSecondary: '#64748B',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  border: '#E2E8F0',
 };
 
 export default function HomeScreen() {
   const { user, logout, language, changeLanguage, isRideActive, setIsRideActive, hasPromptedLocation } = useAuth();
   const [locationGranted, setLocationGranted] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Location.getForegroundPermissionsAsync();
-      setLocationGranted(status === 'granted');
-    })();
-  }, [hasPromptedLocation]);
+  // Re-fetch location grant status only when triggered by manual action or relevant state change
 
   const handleEnableLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -56,7 +52,7 @@ export default function HomeScreen() {
   const [dashboardData, setDashboardData] = useState({ active: false, premium: 0, protected: 1000, claimsCount: 0 });
 
   useEffect(() => {
-    (async () => {
+    const fetchData = async () => {
       try {
         const polRes = await api.get('/policies/active');
         const claimRes = await api.get('/claims/');
@@ -66,8 +62,11 @@ export default function HomeScreen() {
            protected: 1000,
            claimsCount: claimRes.data?.claims?.length || 0
         });
-      } catch(e) {}
-    })();
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
+      }
+    };
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -82,12 +81,22 @@ export default function HomeScreen() {
   }, [isRideActive]);
 
   const handleStartRide = async () => {
-    const { status } = await Location.getForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      const { status: newStatus } = await Location.requestForegroundPermissionsAsync();
-      if (newStatus !== 'granted') return;
-      setLocationGranted(true);
+    // Only agents should be checked for GPS
+    if (user?.role === 'admin') {
+      Alert.alert("Admin Mode", "Admins cannot start delivery rides.");
+      return;
     }
+
+    try {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        const { status: newStatus } = await Location.requestForegroundPermissionsAsync();
+        if (newStatus !== 'granted') {
+          Alert.alert("Location Required", "Please enable location to track your delivery.");
+          return;
+        }
+        setLocationGranted(true);
+      }
     
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsRideActive(true);
@@ -132,6 +141,9 @@ export default function HomeScreen() {
       setWeatherStatus({ rain_status: false, zone: 'Unknown' });
     } finally {
       setWeatherLoading(false);
+    }
+    } catch (err) {
+      console.error("Start ride failure:", err);
     }
   };
 
@@ -218,10 +230,10 @@ export default function HomeScreen() {
                       <Text style={{ color: UI.primary, fontSize: 16, fontWeight: 'bold' }}>🛡 Protection active</Text>
                       
                       {autoClaimStatus && (
-                        <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#333333', gap: 4 }}>
+                        <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: UI.border, gap: 4 }}>
                           <Text style={{ color: UI.text, fontSize: 16, fontWeight: 'bold' }}>📄 Claim Created</Text>
                           {payoutState === 'pending' && <Text style={{ color: UI.warning, fontSize: 16, fontWeight: 'bold' }}>⏳ Processing...</Text>}
-                          {payoutState === 'approved' && <Text style={{ color: '#3B82F6', fontSize: 16, fontWeight: 'bold' }}>💰 Approving ₹{payoutAmount}...</Text>}
+                          {payoutState === 'approved' && <Text style={{ color: '#2563EB', fontSize: 16, fontWeight: 'bold' }}>💰 Approving ₹{payoutAmount}...</Text>}
                           {payoutState === 'paid' && (
                             <>
                               <Text style={{ color: UI.primary, fontSize: 16, fontWeight: 'bold' }}>💰 ₹{payoutAmount} credited</Text>
@@ -347,51 +359,51 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: UI.bg },
-  contentContainer: { padding: 24, paddingTop: 60, paddingBottom: 100 },
+  contentContainer: { padding: 20, paddingTop: 60, paddingBottom: 100 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   headerTextContainer: { flex: 1 },
   greeting: { color: UI.text, fontSize: 28, fontWeight: 'bold' },
   subtitleText: { fontSize: 16, color: UI.textSecondary, marginTop: 4 },
-  profileAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: UI.surface, justifyContent: 'center', alignItems: 'center' },
+  profileAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: UI.surface, justifyContent: 'center', alignItems: 'center', boxShadow: '0px 2px 6px rgba(0,0,0,0.1)' },
   profileAvatarText: { color: UI.text, fontSize: 20, fontWeight: 'bold' },
   disabledOpacity: { opacity: 0.5 },
-  locationBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: UI.surface, borderRadius: 16, padding: 16, marginBottom: 24, borderWidth: 1, borderColor: UI.danger },
+  locationBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FEF2F2', borderRadius: 14, padding: 16, marginBottom: 24, borderWidth: 1, borderColor: '#FCA5A5' },
   bannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  bannerText: { color: UI.danger, fontSize: 18, fontWeight: 'bold' },
-  enableButton: { backgroundColor: UI.danger, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
-  enableButtonText: { color: UI.text, fontSize: 16, fontWeight: 'bold' },
-  mainCard: { backgroundColor: UI.surface, borderRadius: 16, padding: 20, marginBottom: 24 },
+  bannerText: { color: UI.danger, fontSize: 16, fontWeight: 'bold' },
+  enableButton: { backgroundColor: UI.danger, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
+  enableButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: 'bold' },
+  mainCard: { backgroundColor: UI.surface, borderRadius: 14, padding: 20, marginBottom: 24, boxShadow: '0px 2px 6px rgba(0,0,0,0.1)' },
   mainCardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   mainCardTitle: { color: UI.text, fontSize: 20, fontWeight: 'bold', marginLeft: 12 },
   rideStats: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
   statBox: { backgroundColor: UI.bg, flex: 1, padding: 16, borderRadius: 12, marginHorizontal: 4, alignItems: 'center' },
   statBoxLabel: { color: UI.textSecondary, fontSize: 14, marginBottom: 4 },
   statBoxValue: { color: UI.text, fontSize: 20, fontWeight: 'bold' },
-  rideButton: { height: 56, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  rideButton: { height: 56, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
   rideButtonPrimary: { backgroundColor: UI.primary },
   rideButtonDanger: { backgroundColor: UI.danger },
   rideButtonText: { fontSize: 18, fontWeight: 'bold' },
   gridContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24, justifyContent: 'space-between' },
-  gridCard: { width: '48%', backgroundColor: UI.surface, padding: 16, borderRadius: 16 },
-  gridCardTitle: { color: UI.textSecondary, fontSize: 13, fontWeight: 'bold', marginBottom: 12, textTransform: 'uppercase' },
+  gridCard: { width: '48%', backgroundColor: UI.surface, padding: 16, borderRadius: 14, boxShadow: '0px 2px 6px rgba(0,0,0,0.1)' },
+  gridCardTitle: { color: UI.textSecondary, fontSize: 14, fontWeight: '600', marginBottom: 12 },
   gridCardValueRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   gridCardEmoji: { fontSize: 24 },
-  gridCardValue: { color: UI.text, fontSize: 18, fontWeight: 'bold' },
-  sectionTitle: { color: UI.textSecondary, fontSize: 16, fontWeight: 'bold', marginBottom: 12, marginTop: 8 },
-  stickyFooter: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 24, backgroundColor: UI.bg },
-  ctaButton: { backgroundColor: UI.primary, height: 60, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  ctaText: { color: UI.bg, fontSize: 20, fontWeight: 'bold' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: UI.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '85%', paddingTop: 24 },
+  gridCardValue: { color: UI.text, fontSize: 20, fontWeight: 'bold' },
+  sectionTitle: { color: UI.text, fontSize: 18, fontWeight: 'bold', marginBottom: 12, marginTop: 8 },
+  stickyFooter: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 24, paddingTop: 12, backgroundColor: 'rgba(248, 250, 252, 0.9)' },
+  ctaButton: { backgroundColor: UI.primary, height: 56, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', boxShadow: '0px 4px 8px rgba(22, 163, 74, 0.2)' },
+  ctaText: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '80%', paddingTop: 24 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingBottom: 16 },
   modalTitle: { fontSize: 24, fontWeight: 'bold', color: UI.text },
   modalScroll: { padding: 24 },
-  modalCard: { backgroundColor: UI.surface, borderRadius: 16, padding: 16, marginBottom: 24 },
-  modalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: UI.bg },
+  modalCard: { backgroundColor: UI.bg, borderRadius: 14, padding: 16, marginBottom: 24 },
+  modalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: UI.border },
   modalLabel: { color: UI.textSecondary, fontSize: 16 },
   modalValue: { color: UI.text, fontSize: 16, fontWeight: 'bold' },
-  langRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: UI.bg },
-  langText: { color: UI.text, fontSize: 18 },
-  logoutButton: { marginTop: 12, height: 56, borderRadius: 12, backgroundColor: UI.surface, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
-  logoutText: { color: UI.danger, fontSize: 18, fontWeight: 'bold' },
+  langRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: UI.border },
+  langText: { color: UI.text, fontSize: 17, fontWeight: '500' },
+  logoutButton: { marginTop: 12, height: 56, borderRadius: 12, backgroundColor: '#FEF2F2', alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  logoutText: { color: UI.danger, fontSize: 17, fontWeight: 'bold' },
 });

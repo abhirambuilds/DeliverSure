@@ -5,91 +5,84 @@ import { useAuth } from '@/context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
 
+import api from '@/src/services/api';
+import { ActivityIndicator, Alert } from 'react-native';
+
+const UI = {
+  primary: '#16A34A',
+  bg: '#F8FAFC',
+  surface: '#FFFFFF',
+  text: '#0F172A',
+  textSecondary: '#64748B',
+  danger: '#EF4444',
+  border: '#E2E8F0',
+};
+
 export default function NewClaimScreen() {
   const router = useRouter();
-  const { addClaim } = useAuth();
-
   const [problem, setProblem] = useState('');
   const [amount, setAmount] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const pickImage = async () => {
-    // No permissions request is strictly necessary for just picking from gallery in newer Expo versions,
-    // but we'll use launchImageLibraryAsync directly.
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
     });
-
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setImageUri(result.assets[0].uri);
     }
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     setErrorMsg('');
-    
-    if (!problem.trim()) {
-      setErrorMsg('Please describe the issue.');
-      return;
+    if (!problem.trim()) { setErrorMsg('Please describe the issue.'); return; }
+    if (!amount.trim() || isNaN(Number(amount))) { setErrorMsg('Please enter a valid amount.'); return; }
+
+    setLoading(true);
+    try {
+      await api.post('/claims/create', {
+        title: problem,
+        amount: Number(amount),
+        reason: "User manual submission"
+      });
+      Alert.alert("Claim Submitted", "Your claim is now in the database and under review.");
+      router.back();
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || "Failed to submit claim. Check active policy.");
+    } finally {
+      setLoading(false);
     }
-    
-    if (!amount.trim() || isNaN(Number(amount))) {
-      setErrorMsg('Please enter a valid estimated amount.');
-      return;
-    }
-
-    // Generate a mock ID
-    const newId = `CLM-${Math.floor(1000 + Math.random() * 9000)}`;
-    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-
-    addClaim({
-      id: newId,
-      title: problem,
-      amount: amount,
-      date: `Submitted: ${today}`,
-      status: 'Under Review',
-      proofImage: imageUri
-    });
-
-    router.back();
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Feather name="arrow-left" size={24} color="#ffffff" />
+          <Feather name="arrow-left" size={28} color={UI.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>File New Claim</Text>
-        <View style={{ width: 24 }} />
+        <View style={{ width: 28 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        
         {errorMsg ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{errorMsg}</Text>
-          </View>
+          <View style={styles.errorContainer}><Text style={styles.errorText}>{errorMsg}</Text></View>
         ) : null}
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Problem / Reason</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="Describe the issue (Rain, Heat, etc.)"
+            placeholder="Describe the issue (e.g. Broken parts)"
             placeholderTextColor="#888888"
             value={problem}
             onChangeText={setProblem}
             multiline
-            numberOfLines={4}
-            textAlignVertical="top"
           />
         </View>
 
@@ -97,7 +90,7 @@ export default function NewClaimScreen() {
           <Text style={styles.label}>Estimated Amount (₹)</Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter estimated claim amount"
+            placeholder="500"
             placeholderTextColor="#888888"
             value={amount}
             onChangeText={setAmount}
@@ -107,7 +100,6 @@ export default function NewClaimScreen() {
 
         <View style={styles.uploadGroup}>
           <Text style={styles.label}>Upload Proof (Optional)</Text>
-          
           {imageUri ? (
             <View style={styles.imagePreviewContainer}>
               <Image source={{ uri: imageUri }} style={styles.imagePreview} />
@@ -117,22 +109,20 @@ export default function NewClaimScreen() {
             </View>
           ) : (
             <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-              <Feather name="camera" size={24} color="#3b82f6" style={styles.uploadIcon} />
+              <Feather name="camera" size={24} color="#2563EB" style={styles.uploadIcon} />
               <Text style={styles.uploadButtonText}>Upload Image</Text>
             </TouchableOpacity>
           )}
         </View>
 
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-            <Text style={styles.confirmButtonText}>Confirm</Text>
+          <TouchableOpacity style={[styles.confirmButton, loading && { opacity: 0.7 }]} onPress={handleConfirm} disabled={loading}>
+            {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.confirmButtonText}>Confirm</Text>}
           </TouchableOpacity>
-          
           <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
         </View>
-
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -141,7 +131,7 @@ export default function NewClaimScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     flexDirection: 'row',
@@ -150,52 +140,51 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 20,
-    backgroundColor: '#1a1a1a',
-    borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    backgroundColor: '#F8FAFC',
   },
   backButton: {
     padding: 4,
   },
   headerTitle: {
-    color: '#ffffff',
-    fontSize: 20,
+    color: '#0F172A',
+    fontSize: 24,
     fontWeight: 'bold',
   },
   scrollContent: {
-    padding: 24,
+    padding: 20,
     paddingBottom: 60,
   },
   errorContainer: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: '#FEF2F2',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.5)',
+    borderColor: '#FCA5A5',
     borderRadius: 12,
     padding: 12,
     marginBottom: 20,
   },
   errorText: {
-    color: '#ef4444',
+    color: '#EF4444',
     fontSize: 14,
     textAlign: 'center',
+    fontWeight: 'bold',
   },
   inputGroup: {
     marginBottom: 24,
   },
   label: {
-    color: '#ffffff',
+    color: '#0F172A',
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 10,
   },
   input: {
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#333333',
-    borderRadius: 16,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 18,
-    color: '#ffffff',
+    paddingVertical: 16,
+    color: '#0F172A',
     fontSize: 16,
   },
   textArea: {
@@ -206,11 +195,11 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   uploadButton: {
-    backgroundColor: '#1e1e1e',
-    borderWidth: 1,
-    borderColor: '#3b82f6',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#2563EB',
     borderStyle: 'dashed',
-    borderRadius: 16,
+    borderRadius: 12,
     paddingVertical: 32,
     alignItems: 'center',
     justifyContent: 'center',
@@ -219,17 +208,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   uploadButtonText: {
-    color: '#3b82f6',
+    color: '#2563EB',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   imagePreviewContainer: {
     position: 'relative',
-    borderRadius: 16,
+    borderRadius: 12,
     overflow: 'hidden',
     height: 200,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: '#E2E8F0',
   },
   imagePreview: {
     width: '100%',
@@ -240,7 +229,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -251,31 +240,29 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   confirmButton: {
-    backgroundColor: '#3b82f6',
-    borderRadius: 16,
-    paddingVertical: 18,
+    backgroundColor: '#16A34A',
+    borderRadius: 12,
+    height: 56,
     alignItems: 'center',
-    shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    justifyContent: 'center',
+    boxShadow: '0px 4px 8px rgba(22, 163, 74, 0.2)',
   },
   confirmButtonText: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
   },
   cancelButton: {
-    backgroundColor: 'transparent',
-    borderRadius: 16,
-    paddingVertical: 18,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    height: 56,
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: '#E2E8F0',
   },
   cancelButtonText: {
-    color: '#a0a0a0',
+    color: '#64748B',
     fontSize: 16,
     fontWeight: 'bold',
   },

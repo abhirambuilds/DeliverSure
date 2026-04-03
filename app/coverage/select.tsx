@@ -7,11 +7,12 @@ import { Picker } from '@react-native-picker/picker';
 import api from '@/src/services/api';
 
 const UI = {
-  primary: '#0BDC84',
-  bg: '#0A0A0A',
-  surface: '#1A1A1A',
-  text: '#FFFFFF',
-  textSecondary: '#B0B0B0',
+  primary: '#16A34A',
+  bg: '#F8FAFC',
+  surface: '#FFFFFF',
+  text: '#0F172A',
+  textSecondary: '#64748B',
+  border: '#E2E8F0',
 };
 
 const PAYMENT_OPTIONS = [
@@ -34,9 +35,16 @@ export default function CoverageSelectScreen() {
   const [dynamicPremium, setDynamicPremium] = useState<number | null>(null);
 
   useEffect(() => {
-    api.post('/premium/calculate', { location: 'Current Zone' })
-      .then(res => setDynamicPremium(res.data.premium))
-      .catch(() => setDynamicPremium(35));
+    const fetchPremium = async () => {
+      try {
+        const res = await api.post('/premium/calculate', { location: 'Current Zone' });
+        setDynamicPremium(res.data.premium);
+      } catch (err) {
+        console.error("Premium calculation error:", err);
+        setDynamicPremium(35);
+      }
+    };
+    fetchPremium();
   }, []);
 
   const activeIds = user?.activeCoverages?.map(c => c.id) || [];
@@ -153,33 +161,33 @@ export default function CoverageSelectScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: UI.bg },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 60, paddingBottom: 20, backgroundColor: UI.bg },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: UI.bg },
   backButton: { padding: 4 },
   headerTitle: { color: UI.text, fontSize: 24, fontWeight: 'bold' },
-  scrollContent: { padding: 24 },
-  card: { backgroundColor: UI.surface, borderRadius: 16, padding: 20, marginBottom: 20 },
+  scrollContent: { padding: 20 },
+  card: { backgroundColor: UI.surface, borderRadius: 14, padding: 20, marginBottom: 20, boxShadow: '0px 2px 6px rgba(0,0,0,0.1)' },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   cardHeaderRight: { flexDirection: 'row', alignItems: 'baseline' },
-  activeBadge: { backgroundColor: '#1A3324', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  activeBadge: { backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   activeText: { color: UI.primary, fontWeight: 'bold', fontSize: 14 },
   priceText: { color: UI.text, fontSize: 24, fontWeight: 'bold' },
   cardTitle: { color: UI.text, fontSize: 22, fontWeight: 'bold', marginBottom: 8 },
   description: { color: UI.textSecondary, fontSize: 16, marginBottom: 24 },
   btn: { height: 56, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  btnPrimary: { backgroundColor: UI.primary },
-  btnDisabled: { backgroundColor: UI.bg, borderWidth: 1, borderColor: UI.textSecondary },
+  btnPrimary: { backgroundColor: UI.primary, boxShadow: '0px 4px 8px rgba(22, 163, 74, 0.2)' },
+  btnDisabled: { backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: UI.border },
   btnText: { fontSize: 18, fontWeight: 'bold' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: UI.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, minHeight: '60%' },
   modalTitle: { fontSize: 28, fontWeight: 'bold', color: UI.text, marginBottom: 24, textAlign: 'center' },
   paymentOptions: { marginBottom: 24 },
-  payOpt: { flexDirection: 'row', alignItems: 'center', backgroundColor: UI.bg, padding: 20, borderRadius: 16, marginBottom: 12, borderWidth: 2, borderColor: UI.bg },
-  payOptActive: { borderColor: UI.primary },
+  payOpt: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 18, borderRadius: 12, marginBottom: 12, borderWidth: 2, borderColor: '#F8FAFC' },
+  payOptActive: { borderColor: UI.primary, backgroundColor: '#DCFCE7' },
   payOptTextWrapper: { flex: 1, marginLeft: 16 },
   payOptTitle: { color: UI.text, fontSize: 18, fontWeight: 'bold' },
   payOptSub: { color: UI.textSecondary, fontSize: 14, marginTop: 4 },
-  payButton: { backgroundColor: UI.primary, height: 60, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  payButtonText: { color: UI.bg, fontSize: 20, fontWeight: 'bold' },
-  cancelButton: { height: 60, borderRadius: 16, justifyContent: 'center', alignItems: 'center', backgroundColor: UI.bg },
+  payButton: { backgroundColor: UI.primary, height: 60, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12, boxShadow: '0px 4px 8px rgba(22, 163, 74, 0.2)' },
+  payButtonText: { color: '#FFFFFF', fontSize: 20, fontWeight: 'bold' },
+  cancelButton: { height: 60, borderRadius: 12, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F1F5F9' },
   cancelButtonText: { color: UI.text, fontSize: 18, fontWeight: 'bold' }
 });
