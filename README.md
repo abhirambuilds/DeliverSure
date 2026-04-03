@@ -2,7 +2,7 @@
 
 [![React Native](https://img.shields.io/badge/React_Native-Expo-0081CB?style=for-the-badge&logo=react)](https://reactnative.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![Status](https://img.shields.io/badge/Status-Phase_1_Complete-success?style=for-the-badge)](https://github.com/abhirambuilds/DeliverSure)
+[![Status](https://img.shields.io/badge/Status-Phase_2_Complete-success?style=for-the-badge)](https://github.com/abhirambuilds/DeliverSure)
 [![Download APK](https://img.shields.io/badge/Download-APK-FF5722?style=for-the-badge&logo=android)](https://drive.google.com/file/d/14nkCIJRYbcdZ64vxZQMF04C5d2ijJReF/view?usp=drive_link)
 
 ---
@@ -335,10 +335,41 @@ During mass events:
 
 ---
 
+## 🏗️ Phase 2: Technical Deep-Dive & Implementation
+DeliverSure has transitioned from a high-fidelity prototype to a **fully functional, serverless-driven parametric engine**. Phase 2 focused on removing the "Middle Man" and making the insurance lifecycle 100% autonomous.
+
+### 1. The Autonomous Serverless Stack
+We eliminated the need for a traditional backend server by migrating all core logic to **Supabase Edge Functions (Deno)**.
+*   **Benefit**: Infinite scalability and zero-latency execution directly at the network edge.
+*   **Security**: All insurance calculations and claim creations happen server-side using the `service_role` key, preventing any client-side tampering.
+
+### 2. Real-Time Parametric Engine (WeatherAPI.com)
+The claim trigger is no longer manual. We integrated **WeatherAPI.com** directly into our Edge Functions:
+*   **GPS-Linked Sensing**: When a rider starts a delivery, the system fetches hyper-local weather data for their exact coordinates.
+*   **Logic Gates**: If a "Rain" or "Heat" code is detected from the weather station, the system automatically verifies the user's policy and **creates + pays the claim in a single transaction**.
+
+### 3. "WOW" UX & Real-Time Sync
+Insurance is often boring; DeliverSure makes it rewarding:
+*   **Money Burst Animations**: Using React Native Reanimated, we created a "Floating Currency" burst that triggers the moment the backend pays out.
+*   **Zero-Refresh UI**: Using **Supabase Realtime Channels**, the app "listens" for claim updates. When a payout occurs in the cloud, the rider’s device reflects the new balance instantly without needing a page refresh or re-login.
+
+### 4. Financial Management & Withdrawal System
+We've added a professional-grade financial layer for the gig worker:
+*   **Digital Wallet**: Tracks lifetime earnings from parametric payouts.
+*   **Bank Withdrawal Simulator**: A premium-styled withdrawal flow where users can enter Bank Name, Account Number, and IFSC codes to "withdraw" their earnings to their external accounts.
+*   **Automated Daily Reset**: To ensure clean daily reporting, the app now automatically resets "Today's Progress" (trips and distance) when a new calendar day begins.
+
+### 5. Developer & Testing Tools
+To ensure a smooth hackathon demo, we added:
+*   **Nuclear Reset**: A one-click "Purge" button in the Profile Menu that wipes all user claims, policies, and dashboard stats from both the Cloud database and Local state for a fresh start.
+*   **Simulated Triggers**: Special hooks for 3rd and 5th deliveries to force-trigger "Rain" and "Heat" claims for demonstration purposes.
+
+---
+
 ## 🏁 Conclusion
 DeliverSure redefines insurance by shifting from:
-*   ❌ **Reactive** → Manual claims
-*   ✅ **Proactive** → Automated protection
+*   ❌ **Reactive** → Manual forms and weeks of waiting.
+*   ✅ **Proactive** → Automated environmental sensors and instant bank deposits.
 
 It creates a safety net for gig workers’ income, ensuring financial stability in uncertain conditions.
 
