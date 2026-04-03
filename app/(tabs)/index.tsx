@@ -6,7 +6,7 @@ import { useRouter } from "expo-router";
 import React, { useState, useEffect } from "react";
 import { Feather } from "@expo/vector-icons";
 import * as Location from 'expo-location';
-import api, { claimsAPI } from "@/src/services/api";
+import api from "@/src/services/api";
 import { supabaseClient } from "@/src/services/supabaseClient";
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -59,7 +59,7 @@ export default function HomeScreen() {
     (async () => {
       try {
         const polRes = await api.get('/policies/active');
-        const claimRes = await claimsAPI.list();
+        const claimRes = await api.get('/claims/');
         setDashboardData({
            active: !!polRes.data?.policy,
            premium: polRes.data?.policy?.weekly_premium || 0,

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import storage from '@/utils/storage';
-import { authAPI, profileAPI } from '@/src/services/api';
+import api from '@/src/services/api';
 import { Language } from '@/utils/translations';
 
 type Role = 'admin' | 'user' | null;
@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(savedToken);
         setRole((savedRole as Role) || 'user');
         try {
-          const res = await profileAPI.getMe();
+          const res = await api.get('/profiles/me');
           const profile = res.data.profile;
           
           let fetchedCoverages: any[] = [];
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const res = await authAPI.login(email, password);
+    const res = await api.post('/auth/login', { email, password });
     const { access_token } = res.data;
     const userRole: Role = email === 'admin@ws.com' ? 'admin' : 'user';
     await storage.setItem('userToken', access_token);

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { claimsAPI } from '@/src/services/api';
+import api from '@/src/services/api';
 
 const UI = {
   primary: '#0BDC84',
@@ -16,11 +16,11 @@ const UI = {
 
 export default function ClaimsScreen() {
   const router = useRouter();
-  const [claims, setClaims] = useState([]);
+  const [claims, setClaims] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    claimsAPI.list()
+    api.get('/claims/')
       .then(res => setClaims(res.data.claims || []))
       .catch(() => setClaims([]))
       .finally(() => setLoading(false));

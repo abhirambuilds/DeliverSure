@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from "react-native";
 import { useRouter, Redirect } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
-import { authAPI } from "@/src/services/api";
+import api from "@/src/services/api";
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -32,7 +32,7 @@ export default function SignupScreen() {
     }
     setIsLoading(true);
     try {
-      await authAPI.register({
+      await api.post("/auth/register", {
         email,
         password,
         full_name: name,

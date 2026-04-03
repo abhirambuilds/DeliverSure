@@ -4,18 +4,18 @@ import { useThemeContext, ThemeColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "expo-router";
 import { t } from "@/utils/translations";
-import { policiesAPI } from "@/src/services/api";
+import api from "@/src/services/api";
 
 export default function CoverageScreen() {
   const { language } = useAuth();
   const { colors } = useThemeContext();
   const router = useRouter();
   const styles = createStyles(colors);
-  const [policy, setPolicy] = useState(null);
+  const [policy, setPolicy] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    policiesAPI.getActive()
+    api.get('/policies/active')
       .then(res => setPolicy(res.data.policy || null))
       .catch(() => setPolicy(null))
       .finally(() => setLoading(false));

@@ -255,7 +255,7 @@ During mass events:
 **IMPORTANT NOTES:**
 * Never commit .env files
 * Only use .env.example for sharing
-* Backend runs on: `http://localhost:8000`
+* Backend runs on the URL specified in your environment variables (e.g., `https://deliversure.onrender.com` or `http://localhost:8000`)
 
 ---
 
