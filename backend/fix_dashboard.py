@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+﻿content = '''import React, { useState, useEffect, useContext } from "react";
 import { ThemeContext } from "../../context/ThemeContext";
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Modal, Switch, ActivityIndicator } from "react-native";
 import { useAuth } from "@/context/AuthContext";
@@ -162,3 +162,7 @@ const getStyles = (isDark: boolean) => StyleSheet.create({
   logoutButton: { marginTop: 24, paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: "rgba(239,68,68,0.5)", alignItems: "center", backgroundColor: "rgba(239,68,68,0.1)", flexDirection: "row", justifyContent: "center" },
   logoutButtonText: { color: "#ef4444", fontSize: 16, fontWeight: "bold" },
 });
+'''
+with open('D:/Projects/Guidewire/Phase2/DeliverSure/app/admin/dashboard.tsx', 'w', encoding='utf-8', newline='\n') as f:
+    f.write(content)
+print('dashboard.tsx done')
