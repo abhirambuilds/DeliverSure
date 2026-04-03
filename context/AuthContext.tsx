@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import storage from '@/utils/storage';
-import api from '@/src/services/api';
+import { supabase } from '@/src/lib/supabase';
 import { Language } from '@/utils/translations';
 
 type Role = 'admin' | 'agent' | null;
@@ -14,17 +13,21 @@ export interface Claim {
   proofImage?: string | null;
 }
 interface User {
-  email: string; name?: string; phone?: string; dob?: string; gender?: string;
-  activeCoverages?: CoverageOption[]; claims?: Claim[];
+  id: string;
+  email: string; name?: string; phone?: string;
+  activeCoverages?: CoverageOption[];
   role?: Role;
 }
 interface AuthContextType {
-  user: User | null; role: Role; token: string | null; language: Language;
+  user: User | null; role: Role; language: Language;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void; updateUser: (data: Partial<User>) => void;
+  logout: () => void;
+  updateUser: (data: Partial<User>) => void;
   addClaim: (claim: Claim) => void;
-  changeLanguage: (lang: Language) => void; isRideActive: boolean;
-  setIsRideActive: (active: boolean) => void; hasPromptedLocation: boolean;
+  changeLanguage: (lang: Language) => void;
+  isRideActive: boolean;
+  setIsRideActive: (active: boolean) => void;
+  hasPromptedLocation: boolean;
   setHasPromptedLocation: (val: boolean) => void;
 }
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,95 +35,90 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<Role>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [language, setLanguage] = useState<Language>('en');
   const [isRideActive, setIsRideActive] = useState(false);
   const [hasPromptedLocation, setHasPromptedLocation] = useState(false);
 
+  // Restore session from Supabase on mount
   useEffect(() => {
-    const restore = async () => {
-      const savedToken = await storage.getItem('userToken');
-      const savedRole = await storage.getItem('userRole');
-      if (savedToken) {
-        setToken(savedToken);
-        setRole((savedRole as Role) || 'agent');
-        try {
-          const res = await api.get('/profiles/me');
-          const profile = res.data.profile;
-          const userRole = profile.role || 'agent';
-          
-          setRole(userRole as Role);
-          await storage.setItem('userRole', userRole);
-
-          let fetchedCoverages: any[] = [];
-          try {
-            const polRes = await api.get('/policies/active');
-            if (polRes.data?.policy) {
-              fetchedCoverages = [{ id: polRes.data.policy.id, name: 'Active Protection', price: polRes.data.policy.weekly_premium, icon: 'shield' }];
-            }
-          } catch (e) { console.log('No active policy found at restore') }
-          
-          setUser({ 
-            email: profile.email || profile.full_name, 
-            name: profile.full_name, 
-            activeCoverages: fetchedCoverages,
-            role: userRole as Role
-          });
-        } catch (err) {
-          console.error("Session restore error:", err);
-          logout();
-        }
+    const restoreSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await loadProfile(session.user.id, session.user.email || '');
       }
     };
-    restore();
+    restoreSession();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        await loadProfile(session.user.id, session.user.email || '');
+      } else {
+        setUser(null);
+        setRole(null);
+      }
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const loadProfile = async (userId: string, email: string) => {
     try {
-      const res = await api.post('/auth/login', { email, password });
-      const { access_token, user_id } = res.data;
-      
-      await storage.setItem('userToken', access_token);
-      setToken(access_token);
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-      // Fetch profile to get real role
-      const profRes = await api.get('/profiles/me');
-      const profile = profRes.data.profile;
-      const userRole = profile.role || 'agent';
+      const userRole = (profile?.role || 'agent') as Role;
+      setRole(userRole);
 
-      await storage.setItem('userRole', userRole);
-      setRole(userRole as Role);
-      
-      setUser({ 
-        email: profile.email || profile.full_name, 
-        name: profile.full_name,
-        role: userRole as Role
+      // Fetch active policy
+      let fetchedCoverages: CoverageOption[] = [];
+      try {
+        const { data: policy } = await supabase
+          .from('coverage_policies')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('policy_status', 'active')
+          .single();
+        if (policy) {
+          fetchedCoverages = [{ id: policy.id, name: 'Active Protection', price: policy.weekly_premium, description: 'Active', icon: 'shield' }];
+        }
+      } catch (_) {}
+
+      setUser({
+        id: userId,
+        email: profile?.email || email,
+        name: profile?.full_name,
+        activeCoverages: fetchedCoverages,
+        role: userRole,
       });
-      
-      setHasPromptedLocation(false);
-    } catch (err: any) {
-      console.error("Login Error:", err);
-      throw err;
+    } catch (err) {
+      console.error('Profile load error:', err);
     }
   };
 
+  const login = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    setHasPromptedLocation(false);
+    // onAuthStateChange will call loadProfile automatically
+  };
+
   const logout = async () => {
-    try {
-      await storage.removeItem('userToken');
-      await storage.removeItem('userRole');
-    } catch (e) { console.error("Logout storage error", e); }
-    setUser(null); setRole(null); setToken(null);
+    await supabase.auth.signOut();
+    setUser(null);
+    setRole(null);
   };
 
-  const updateUser = (data: Partial<User>) => { if (user) setUser({ ...user, ...data }); };
-
-  const addClaim = (claim: Claim) => {
-    if (user) setUser({ ...user, claims: [claim, ...(user.claims || [])] });
+  const updateUser = (data: Partial<User>) => {
+    if (user) setUser({ ...user, ...data });
   };
+  const addClaim = (claim: Claim) => {};
   const changeLanguage = (lang: Language) => setLanguage(lang);
 
   return (
-    <AuthContext.Provider value={{ user, role, token, language, login, logout, updateUser, addClaim, changeLanguage, isRideActive, setIsRideActive, hasPromptedLocation, setHasPromptedLocation }}>
+    <AuthContext.Provider value={{ user, role, language, login, logout, updateUser, addClaim, changeLanguage, isRideActive, setIsRideActive, hasPromptedLocation, setHasPromptedLocation }}>
       {children}
     </AuthContext.Provider>
   );

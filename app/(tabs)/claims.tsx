@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import api from '@/src/services/api';
+import { supabase } from '@/src/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 const UI = {
   primary: '#16A34A',
@@ -16,15 +16,21 @@ const UI = {
 };
 
 export default function ClaimsScreen() {
-  const router = useRouter();
+  const { user } = useAuth();
   const [claims, setClaims] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user?.id) return;
     const fetchClaims = async () => {
       try {
-        const res = await api.get('/claims/');
-        setClaims(res.data.claims || []);
+        const { data, error } = await supabase
+          .from('claims')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        setClaims(data || []);
       } catch (err) {
         console.error("Fetch claims error:", err);
         setClaims([]);
@@ -33,7 +39,7 @@ export default function ClaimsScreen() {
       }
     };
     fetchClaims();
-  }, []);
+  }, [user?.id]);
 
   const getStatusDetails = (status: any) => {
     const s = status?.toLowerCase() || '';
@@ -48,7 +54,6 @@ export default function ClaimsScreen() {
       <View style={styles.headerRow}>
         <Text style={styles.header}>My Claims</Text>
       </View>
-
       <ScrollView contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         {loading ? (
           <ActivityIndicator color={UI.primary} size="large" style={{ marginTop: 40 }} />
@@ -66,12 +71,10 @@ export default function ClaimsScreen() {
                   <Text style={styles.claimTitle}>{claim.claim_type || "Claim"}</Text>
                   <Text style={styles.claimAmount}>₹{claim.payout_amount || 0}</Text>
                 </View>
-
                 <View style={styles.cardMiddle}>
                   <Text style={styles.claimId}>ID: {claim.id?.slice(0, 8).toUpperCase()}</Text>
                   <Text style={styles.claimDate}>{new Date(claim.created_at).toLocaleDateString()}</Text>
                 </View>
-
                 <View style={[styles.statusBox, { backgroundColor: status.color + '10', borderColor: status.color }]}>
                   <Feather name={status.icon as any} size={20} color={status.color} />
                   <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>

@@ -1,10 +1,9 @@
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Modal, Alert, TextInput } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Modal, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth, CoverageOption } from '@/context/AuthContext';
 import { useState, useEffect } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
-import api from '@/src/services/api';
+import { supabase } from '@/src/lib/supabase';
 
 const UI = {
   primary: '#16A34A',
@@ -32,16 +31,21 @@ export default function CoverageSelectScreen() {
   const [selectedItem, setSelectedItem] = useState<CoverageOption | null>(null);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState('card');
-  const [dynamicPremium, setDynamicPremium] = useState<number | null>(null);
+  const [dynamicPremium, setDynamicPremium] = useState<number>(35);
 
   useEffect(() => {
+    // Calculate premium using Supabase Edge Function
     const fetchPremium = async () => {
       try {
-        const res = await api.post('/premium/calculate', { location: 'Current Zone' });
-        setDynamicPremium(res.data.premium);
+        const { data, error } = await supabase.functions.invoke('calculate-premium', {
+          body: { location: 'Current Zone', lat: 12.9716, lng: 77.5946 }
+        });
+        if (!error && data?.premium) {
+          setDynamicPremium(data.premium);
+        }
       } catch (err) {
         console.error("Premium calculation error:", err);
-        setDynamicPremium(35);
+        // Fallback: keep default 35
       }
     };
     fetchPremium();
@@ -50,30 +54,42 @@ export default function CoverageSelectScreen() {
   const activeIds = user?.activeCoverages?.map(c => c.id) || [];
 
   const handleSelect = (item: CoverageOption) => {
-    setSelectedItem({ ...item, price: dynamicPremium || 35 });
+    setSelectedItem({ ...item, price: dynamicPremium });
     setPaymentModalVisible(true);
   };
 
   const handlePaymentOk = async () => {
-    if (selectedItem) {
-      try {
-        const res = await api.post('/policies/activate', {
-            user_id: user?.email || "mock_id",
-            zone: "Current Zone",
-            premium: dynamicPremium || 35,
-            coverage_amount: 1000
-        });
-        
-        updateUser({
-           activeCoverages: [
-             { id: res.data.policy_id, name: 'Rain Protection', description: 'Active', price: res.data.premium, icon: 'shield' }
-           ]
-        });
-        
-        setPaymentModalVisible(false);
-        Alert.alert("Coverage Active", "Your parametric policy has been legally activated within the database.", [{ text: "OK", onPress: () => router.back() }]);
-      } catch (err) {
-        Alert.alert("Error activating", "System could not write policy to DB.");
+    if (!selectedItem || !user?.id) return;
+    try {
+      const startDate = new Date().toISOString().split('T')[0];
+      const endDate = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+
+      const { data, error } = await supabase.from('coverage_policies').insert({
+        user_id: user.id,
+        weekly_premium: dynamicPremium,
+        coverage_amount: 1000,
+        start_date: startDate,
+        end_date: endDate,
+        policy_status: 'active',
+        risk_zone: 'Current Zone',
+      }).select().single();
+
+      if (error) throw error;
+
+      updateUser({
+        activeCoverages: [
+          { id: data.id, name: selectedItem.name, description: 'Active', price: dynamicPremium, icon: 'shield' }
+        ]
+      });
+
+      setPaymentModalVisible(false);
+      Alert.alert("Coverage Active", "Your parametric policy has been activated.", [{ text: "OK", onPress: () => router.back() }]);
+    } catch (err: any) {
+      const msg = err?.message || 'System could not write policy to DB.';
+      if (msg.toLowerCase().includes('already')) {
+        Alert.alert("Already Active", "You already have an active policy.");
+      } else {
+        Alert.alert("Error", msg);
       }
     }
   };
@@ -91,7 +107,6 @@ export default function CoverageSelectScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {AVAILABLE_COVERAGES.map(item => {
           const isActive = activeIds.includes(item.id);
-
           return (
             <View key={item.id} style={styles.card}>
               <View style={styles.cardTop}>
@@ -100,15 +115,12 @@ export default function CoverageSelectScreen() {
                   {isActive && <View style={styles.activeBadge}><Text style={styles.activeText}>Active</Text></View>}
                 </View>
               </View>
-              
               <Text style={{ color: UI.text, fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>
-                💰 Weekly Premium: {dynamicPremium ? `₹${dynamicPremium}` : 'Calculating...'}
+                💰 Weekly Premium: ₹{dynamicPremium}
               </Text>
-              
               <Text style={styles.cardTitle}>{item.name}</Text>
               <Text style={styles.description}>{item.description}</Text>
-              
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.btn, isActive ? styles.btnDisabled : styles.btnPrimary]}
                 onPress={() => handleSelect(item)}
                 disabled={isActive}
@@ -127,10 +139,9 @@ export default function CoverageSelectScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Pay ₹{selectedItem?.price}</Text>
-            
             <View style={styles.paymentOptions}>
               {PAYMENT_OPTIONS.map(opt => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   key={opt.id}
                   style={[styles.payOpt, selectedPayment === opt.id && styles.payOptActive]}
                   onPress={() => setSelectedPayment(opt.id)}
@@ -144,7 +155,6 @@ export default function CoverageSelectScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-
             <TouchableOpacity style={styles.payButton} onPress={handlePaymentOk}>
               <Text style={styles.payButtonText}>Pay Now</Text>
             </TouchableOpacity>
@@ -154,7 +164,6 @@ export default function CoverageSelectScreen() {
           </View>
         </View>
       </Modal>
-
     </View>
   );
 }
@@ -170,7 +179,6 @@ const styles = StyleSheet.create({
   cardHeaderRight: { flexDirection: 'row', alignItems: 'baseline' },
   activeBadge: { backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   activeText: { color: UI.primary, fontWeight: 'bold', fontSize: 14 },
-  priceText: { color: UI.text, fontSize: 24, fontWeight: 'bold' },
   cardTitle: { color: UI.text, fontSize: 22, fontWeight: 'bold', marginBottom: 8 },
   description: { color: UI.textSecondary, fontSize: 16, marginBottom: 24 },
   btn: { height: 56, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
@@ -189,5 +197,5 @@ const styles = StyleSheet.create({
   payButton: { backgroundColor: UI.primary, height: 60, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12, boxShadow: '0px 4px 8px rgba(22, 163, 74, 0.2)' },
   payButtonText: { color: '#FFFFFF', fontSize: 20, fontWeight: 'bold' },
   cancelButton: { height: 60, borderRadius: 12, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F1F5F9' },
-  cancelButtonText: { color: UI.text, fontSize: 18, fontWeight: 'bold' }
+  cancelButtonText: { color: UI.text, fontSize: 18, fontWeight: 'bold' },
 });

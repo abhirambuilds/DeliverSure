@@ -26,7 +26,7 @@ export default function LoginScreen() {
       // Wait for state to settle or just let the top-level Redirect handles it?
       // Top-level Redirect will handle it once state is updated.
     } catch (err: any) {
-      setErrorMsg(err?.response?.data?.detail || 'Invalid credentials');
+      setErrorMsg(err?.message || 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }

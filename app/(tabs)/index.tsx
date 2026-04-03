@@ -1,4 +1,4 @@
-import { StyleSheet, View, ScrollView, Text, TouchableOpacity, Modal, Switch, LayoutAnimation, Platform, UIManager, Alert } from "react-native";
+import { StyleSheet, View, ScrollView, Text, TouchableOpacity, Modal, Alert, LayoutAnimation, Platform, UIManager } from "react-native";
 import { useAuth } from "@/context/AuthContext";
 import { useThemeContext } from "@/context/ThemeContext";
 import { t, LANGUAGES } from "@/utils/translations";
@@ -6,8 +6,7 @@ import { useRouter } from "expo-router";
 import React, { useState, useEffect } from "react";
 import { Feather } from "@expo/vector-icons";
 import * as Location from 'expo-location';
-import api from "@/src/services/api";
-import { supabaseClient } from "@/src/services/supabaseClient";
+import { supabase } from "@/src/lib/supabase";
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -25,21 +24,8 @@ const UI = {
 };
 
 export default function HomeScreen() {
-  const { user, logout, language, changeLanguage, isRideActive, setIsRideActive, hasPromptedLocation } = useAuth();
-  const [locationGranted, setLocationGranted] = useState(true);
-
-  // Re-fetch location grant status only when triggered by manual action or relevant state change
-
-  const handleEnableLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status === 'granted') {
-      setLocationGranted(true);
-    } else {
-      Alert.alert("Location Required", "Location is required for coverage features");
-    }
-  };
-
-  const { toggleTheme, isDark } = useThemeContext();
+  const { user, logout, language, changeLanguage, isRideActive, setIsRideActive } = useAuth();
+  const { toggleTheme } = useThemeContext();
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
   const [rideTime, setRideTime] = useState(0);
@@ -52,22 +38,25 @@ export default function HomeScreen() {
   const [dashboardData, setDashboardData] = useState({ active: false, premium: 0, protected: 1000, claimsCount: 0 });
 
   useEffect(() => {
+    if (!user?.id) return;
     const fetchData = async () => {
       try {
-        const polRes = await api.get('/policies/active');
-        const claimRes = await api.get('/claims/');
+        const [policyRes, claimsRes] = await Promise.all([
+          supabase.from('coverage_policies').select('*').eq('user_id', user.id).eq('policy_status', 'active').single(),
+          supabase.from('claims').select('id').eq('user_id', user.id),
+        ]);
         setDashboardData({
-           active: !!polRes.data?.policy,
-           premium: polRes.data?.policy?.weekly_premium || 0,
-           protected: 1000,
-           claimsCount: claimRes.data?.claims?.length || 0
+          active: !!policyRes.data,
+          premium: policyRes.data?.weekly_premium || 0,
+          protected: policyRes.data?.coverage_amount || 1000,
+          claimsCount: claimsRes.data?.length || 0,
         });
       } catch (err) {
         console.error("Dashboard fetch error:", err);
       }
     };
     fetchData();
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -81,12 +70,10 @@ export default function HomeScreen() {
   }, [isRideActive]);
 
   const handleStartRide = async () => {
-    // Only agents should be checked for GPS
     if (user?.role === 'admin') {
       Alert.alert("Admin Mode", "Admins cannot start delivery rides.");
       return;
     }
-
     try {
       const { status } = await Location.getForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -95,38 +82,42 @@ export default function HomeScreen() {
           Alert.alert("Location Required", "Please enable location to track your delivery.");
           return;
         }
-        setLocationGranted(true);
       }
-    
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setIsRideActive(true);
-    setRideTime(0);
-    setRideDistance(0);
 
-    setWeatherLoading(true);
-    setWeatherStatus(null);
-    setAutoClaimStatus(false);
-    
-    try {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setIsRideActive(true);
+      setRideTime(0);
+      setRideDistance(0);
+      setWeatherLoading(true);
+      setWeatherStatus(null);
+      setAutoClaimStatus(false);
+
       const loc = await Location.getCurrentPositionAsync({});
-      const res = await api.post('/delivery/start', {
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude
+
+      // Call Supabase Edge Function for delivery start
+      const { data, error } = await supabase.functions.invoke('start-delivery', {
+        body: {
+          user_id: user?.id,
+          lat: loc.coords.latitude,
+          lng: loc.coords.longitude,
+        },
       });
-      
-      setWeatherStatus(res.data.weather);
-      
-      if (res.data.claim) {
+
+      if (error) throw error;
+
+      setWeatherStatus(data.weather);
+
+      if (data.claim_created && data.claim?.id) {
         setAutoClaimStatus(true);
         setPayoutState('pending');
-        setPayoutAmount(res.data.claim.payout_amount);
-        
-        // Listen dynamically to the exact claim row in Postgres for updates via Fastapi BackgroundTasks
-        supabaseClient
-          .channel(`claim-${res.data.claim.id}`)
+        setPayoutAmount(data.payout || 500);
+
+        // Listen to real-time claim status updates from Supabase
+        supabase
+          .channel(`claim-${data.claim.id}`)
           .on(
             'postgres_changes',
-            { event: 'UPDATE', schema: 'public', table: 'claims', filter: `id=eq.${res.data.claim.id}` },
+            { event: 'UPDATE', schema: 'public', table: 'claims', filter: `id=eq.${data.claim.id}` },
             (payload) => {
               const newStatus = payload.new.claim_status;
               if (newStatus === 'approved' || newStatus === 'paid') {
@@ -136,14 +127,11 @@ export default function HomeScreen() {
           )
           .subscribe();
       }
-    } catch (e) {
-      console.log('Delivery Error', e);
+    } catch (e: any) {
+      console.error('Delivery Error', e);
       setWeatherStatus({ rain_status: false, zone: 'Unknown' });
     } finally {
       setWeatherLoading(false);
-    }
-    } catch (err) {
-      console.error("Start ride failure:", err);
     }
   };
 
@@ -152,15 +140,9 @@ export default function HomeScreen() {
     setIsRideActive(false);
   };
 
-  const formatTime = (totalSeconds: number) => {
-    const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
-    const s = (totalSeconds % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
-  };
-
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setModalVisible(false);
-    logout();
+    await logout();
     router.replace('/auth/login');
   };
 
@@ -173,14 +155,13 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-        
         <View style={styles.header}>
           <View style={styles.headerTextContainer}>
             <Text style={styles.greeting}>{t(language, 'welcome')}</Text>
             <Text style={styles.subtitleText}>Stay safe on the road.</Text>
           </View>
-          <TouchableOpacity 
-            style={[styles.profileAvatar, isRideActive && styles.disabledOpacity]} 
+          <TouchableOpacity
+            style={[styles.profileAvatar, isRideActive && styles.disabledOpacity]}
             onPress={() => setModalVisible(true)}
             disabled={isRideActive}
           >
@@ -188,23 +169,11 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {!locationGranted && (
-          <View style={styles.locationBanner}>
-            <View style={styles.bannerLeft}>
-              <Feather name="map-pin" size={24} color={UI.danger} />
-              <Text style={styles.bannerText}>Location is OFF</Text>
-            </View>
-            <TouchableOpacity style={styles.enableButton} onPress={handleEnableLocation}>
-              <Text style={styles.enableButtonText}>Enable</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
         {/* Ride Status Card */}
         <View style={styles.mainCard}>
           {!isRideActive ? (
-            <TouchableOpacity 
-              style={[styles.rideButton, styles.rideButtonPrimary, { height: 64, width: '100%', borderRadius: 16 }]} 
+            <TouchableOpacity
+              style={[styles.rideButton, styles.rideButtonPrimary, { height: 64, width: '100%', borderRadius: 16 }]}
               onPress={handleStartRide}
             >
               <Text style={[styles.rideButtonText, { color: UI.bg, fontSize: 22 }]}>Start Delivery 🚴</Text>
@@ -215,11 +184,11 @@ export default function HomeScreen() {
                 <Feather name="activity" size={24} color={UI.primary} />
                 <Text style={styles.mainCardTitle}>Delivery in Progress</Text>
               </View>
-              
+
               <View style={{ marginBottom: 20, gap: 12, backgroundColor: UI.bg, padding: 16, borderRadius: 12 }}>
                 <Text style={{ color: UI.text, fontSize: 16, fontWeight: 'bold' }}>🟢 Delivery Started</Text>
                 <Text style={{ color: UI.text, fontSize: 16, fontWeight: 'bold' }}>📍 Tracking your route</Text>
-                
+
                 {weatherLoading ? (
                   <Text style={{ color: UI.text, fontSize: 16, fontWeight: 'bold' }}>🌦 Checking weather conditions...</Text>
                 ) : weatherStatus && (
@@ -228,7 +197,6 @@ export default function HomeScreen() {
                       <Text style={{ color: UI.danger, fontSize: 16, fontWeight: 'bold' }}>🌧 Heavy Rain Detected</Text>
                       <Text style={{ color: UI.warning, fontSize: 16, fontWeight: 'bold' }}>⚠️ Income at risk</Text>
                       <Text style={{ color: UI.primary, fontSize: 16, fontWeight: 'bold' }}>🛡 Protection active</Text>
-                      
                       {autoClaimStatus && (
                         <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: UI.border, gap: 4 }}>
                           <Text style={{ color: UI.text, fontSize: 16, fontWeight: 'bold' }}>📄 Claim Created</Text>
@@ -252,10 +220,7 @@ export default function HomeScreen() {
                 )}
               </View>
 
-              <TouchableOpacity 
-                style={[styles.rideButton, styles.rideButtonDanger]} 
-                onPress={handleEndRide}
-              >
+              <TouchableOpacity style={[styles.rideButton, styles.rideButtonDanger]} onPress={handleEndRide}>
                 <Text style={[styles.rideButtonText, { color: UI.text }]}>End Delivery</Text>
               </TouchableOpacity>
             </View>
@@ -268,12 +233,11 @@ export default function HomeScreen() {
             <Text style={styles.gridCardTitle}>Coverage</Text>
             <View style={styles.gridCardValueRow}>
               <Text style={styles.gridCardEmoji}>🛡</Text>
-              <Text style={[styles.gridCardValue, dashboardData.active ? {color: UI.primary} : {color: UI.warning}]}>
+              <Text style={[styles.gridCardValue, dashboardData.active ? { color: UI.primary } : { color: UI.warning }]}>
                 {dashboardData.active ? 'Active' : 'Inactive'}
               </Text>
             </View>
           </View>
-
           <View style={styles.gridCard}>
             <Text style={styles.gridCardTitle}>Premium</Text>
             <View style={styles.gridCardValueRow}>
@@ -281,7 +245,6 @@ export default function HomeScreen() {
               <Text style={styles.gridCardValue}>₹{dashboardData.premium}</Text>
             </View>
           </View>
-
           <View style={styles.gridCard}>
             <Text style={styles.gridCardTitle}>Protected</Text>
             <View style={styles.gridCardValueRow}>
@@ -289,7 +252,6 @@ export default function HomeScreen() {
               <Text style={styles.gridCardValue}>₹{dashboardData.protected}</Text>
             </View>
           </View>
-
           <TouchableOpacity style={styles.gridCard} onPress={() => router.push('/claims')}>
             <Text style={styles.gridCardTitle}>Claims</Text>
             <View style={styles.gridCardValueRow}>
@@ -302,13 +264,11 @@ export default function HomeScreen() {
 
       {/* STICKY CTA */}
       <View style={styles.stickyFooter}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.ctaButton}
           onPress={() => {
             router.navigate('/(tabs)/coverage');
-            setTimeout(() => {
-              router.push('/coverage/select');
-            }, 100);
+            setTimeout(() => { router.push('/coverage/select'); }, 100);
           }}
         >
           <Feather name="shield" size={24} color={UI.bg} style={{ marginRight: 12 }} />
@@ -326,14 +286,11 @@ export default function HomeScreen() {
                 <Feather name="x" size={32} color={UI.textSecondary} />
               </TouchableOpacity>
             </View>
-
             <ScrollView bounces={false} style={styles.modalScroll}>
               <View style={styles.modalCard}>
                 <View style={styles.modalRow}><Text style={styles.modalLabel}>Name</Text><Text style={styles.modalValue}>{user?.name || "Not set"}</Text></View>
                 <View style={styles.modalRow}><Text style={styles.modalLabel}>Email</Text><Text style={styles.modalValue}>{user?.email}</Text></View>
-                <View style={styles.modalRow}><Text style={styles.modalLabel}>Phone</Text><Text style={styles.modalValue}>{user?.phone || "Not set"}</Text></View>
               </View>
-
               <Text style={styles.sectionTitle}>Language</Text>
               <View style={styles.modalCard}>
                 {LANGUAGES.map((item) => (
@@ -343,7 +300,6 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-
               <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                 <Feather name="log-out" size={20} color={UI.danger} style={{ marginRight: 8 }} />
                 <Text style={styles.logoutText}>Log Out</Text>
@@ -352,7 +308,6 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-
     </View>
   );
 }
@@ -367,18 +322,9 @@ const styles = StyleSheet.create({
   profileAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: UI.surface, justifyContent: 'center', alignItems: 'center', boxShadow: '0px 2px 6px rgba(0,0,0,0.1)' },
   profileAvatarText: { color: UI.text, fontSize: 20, fontWeight: 'bold' },
   disabledOpacity: { opacity: 0.5 },
-  locationBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FEF2F2', borderRadius: 14, padding: 16, marginBottom: 24, borderWidth: 1, borderColor: '#FCA5A5' },
-  bannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  bannerText: { color: UI.danger, fontSize: 16, fontWeight: 'bold' },
-  enableButton: { backgroundColor: UI.danger, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
-  enableButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: 'bold' },
   mainCard: { backgroundColor: UI.surface, borderRadius: 14, padding: 20, marginBottom: 24, boxShadow: '0px 2px 6px rgba(0,0,0,0.1)' },
   mainCardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   mainCardTitle: { color: UI.text, fontSize: 20, fontWeight: 'bold', marginLeft: 12 },
-  rideStats: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
-  statBox: { backgroundColor: UI.bg, flex: 1, padding: 16, borderRadius: 12, marginHorizontal: 4, alignItems: 'center' },
-  statBoxLabel: { color: UI.textSecondary, fontSize: 14, marginBottom: 4 },
-  statBoxValue: { color: UI.text, fontSize: 20, fontWeight: 'bold' },
   rideButton: { height: 56, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
   rideButtonPrimary: { backgroundColor: UI.primary },
   rideButtonDanger: { backgroundColor: UI.danger },
