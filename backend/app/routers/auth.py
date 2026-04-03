@@ -22,11 +22,10 @@ class LoginRequest(BaseModel):
 def register(req: RegisterRequest):
     try:
         # Step 1: Create user in Supabase Auth
-        # Using admin.create_user to bypass email verification for a smoother demo
-        auth_response = supabase.auth.admin.create_user({
+        # Using sign_up as per user example
+        auth_response = supabase.auth.sign_up({
             'email': req.email,
             'password': req.password,
-            'email_confirm': True
         })
         
         if not auth_response.user:
