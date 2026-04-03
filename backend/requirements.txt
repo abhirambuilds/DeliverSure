@@ -1,6 +1,7 @@
 ﻿fastapi
 uvicorn
 supabase
+requests
 python-dotenv
 httpx
 apscheduler

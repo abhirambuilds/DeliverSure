@@ -232,6 +232,33 @@ During mass events:
 
 ---
 
+## 🛠️ Environment Setup
+
+### BACKEND
+1. Go to backend folder
+2. Copy file:
+`cp .env.example .env`
+3. Fill values:
+* SUPABASE_URL
+* SUPABASE_SERVICE_ROLE_KEY
+* OPENWEATHER_API_KEY
+
+### FRONTEND
+1. Go to frontend folder
+2. Copy file:
+`cp .env.example .env`
+3. Fill values:
+* EXPO_PUBLIC_SUPABASE_URL
+* EXPO_PUBLIC_SUPABASE_ANON_KEY
+* EXPO_PUBLIC_API_BASE_URL
+
+**IMPORTANT NOTES:**
+* Never commit .env files
+* Only use .env.example for sharing
+* Backend runs on: `http://localhost:8000`
+
+---
+
 ## 🛠️ Tech Stack
 
 ### Frontend

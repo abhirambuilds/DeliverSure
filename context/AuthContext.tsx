@@ -21,7 +21,7 @@ interface AuthContextType {
   user: User | null; role: Role; token: string | null; language: Language;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void; updateUser: (data: Partial<User>) => void;
-  addCoverage: (coverage: CoverageOption) => void; addClaim: (claim: Claim) => void;
+  addClaim: (claim: Claim) => void;
   changeLanguage: (lang: Language) => void; isRideActive: boolean;
   setIsRideActive: (active: boolean) => void; hasPromptedLocation: boolean;
   setHasPromptedLocation: (val: boolean) => void;
@@ -46,7 +46,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const res = await profileAPI.getMe();
           const profile = res.data.profile;
-          setUser({ email: profile.full_name, name: profile.full_name });
+          
+          let fetchedCoverages: any[] = [];
+          try {
+            const api = (await import('@/src/services/api')).default;
+            const polRes = await api.get('/policies/active');
+            if (polRes.data?.policy) {
+              fetchedCoverages = [{ id: polRes.data.policy.id, name: 'Active Protection', price: polRes.data.policy.weekly_premium, icon: 'shield' }];
+            }
+          } catch (e) { console.log('No active policy found at login') }
+          
+          setUser({ email: profile.full_name, name: profile.full_name, activeCoverages: fetchedCoverages });
         } catch {}
       }
     };
@@ -70,20 +80,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateUser = (data: Partial<User>) => { if (user) setUser({ ...user, ...data }); };
-  const addCoverage = (coverage: CoverageOption) => {
-    if (user) {
-      const current = user.activeCoverages || [];
-      if (!current.find(c => c.id === coverage.id))
-        setUser({ ...user, activeCoverages: [...current, coverage] });
-    }
-  };
+
   const addClaim = (claim: Claim) => {
     if (user) setUser({ ...user, claims: [claim, ...(user.claims || [])] });
   };
   const changeLanguage = (lang: Language) => setLanguage(lang);
 
   return (
-    <AuthContext.Provider value={{ user, role, token, language, login, logout, updateUser, addCoverage, addClaim, changeLanguage, isRideActive, setIsRideActive, hasPromptedLocation, setHasPromptedLocation }}>
+    <AuthContext.Provider value={{ user, role, token, language, login, logout, updateUser, addClaim, changeLanguage, isRideActive, setIsRideActive, hasPromptedLocation, setHasPromptedLocation }}>
       {children}
     </AuthContext.Provider>
   );
