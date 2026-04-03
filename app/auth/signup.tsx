@@ -2,15 +2,20 @@ import React, { useState } from "react";
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from "react-native";
 import { useRouter, Redirect } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
+import AppHeader from '@/components/AppHeader';
 import { supabase } from "@/src/lib/supabase";
 
 export default function SignupScreen() {
   const router = useRouter();
   const { user, role } = useAuth();
 
-  if (user) {
+  if (user && role) {
     if (role === "admin") return <Redirect href="/admin/dashboard" />;
     return <Redirect href="/(tabs)" />;
+  }
+  
+  if (user && !role) {
+    return <View style={styles.container}><ActivityIndicator color="#16A34A" size="large" style={{ marginTop: '50%' }} /></View>;
   }
 
   const [name, setName] = useState("");
@@ -71,12 +76,9 @@ export default function SignupScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+    <View style={styles.container}>
+      <AppHeader title="Join DeliverSure" />
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join us to protect what matters</Text>
-        </View>
 
         {errorMsg ? (
           <View style={styles.errorContainer}>
@@ -106,13 +108,13 @@ export default function SignupScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
-  scrollContainer: { flexGrow: 1, justifyContent: "center", padding: 24, paddingTop: 60 },
+  scrollContainer: { flexGrow: 1, padding: 24, paddingTop: 40 },
   headerContainer: { marginBottom: 40 },
   title: { fontSize: 32, fontWeight: "bold", color: "#0F172A", marginBottom: 8 },
   subtitle: { fontSize: 16, color: "#64748B" },

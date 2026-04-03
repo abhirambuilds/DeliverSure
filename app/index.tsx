@@ -2,17 +2,29 @@ import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useAuth } from '@/context/AuthContext';
 
 export default function SplashScreen() {
   const router = useRouter();
+  const { user, role } = useAuth();
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.replace('/auth/login');
+      if (user) {
+        // Wait until role is loaded before redirecting
+        if (role === 'admin') {
+          router.replace('/admin/dashboard');
+        } else if (role === 'agent') {
+          router.replace('/(tabs)');
+        }
+        // If role is null, we stay on splash longer until it loads
+      } else {
+        router.replace('/auth/login');
+      }
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [router]);
+  }, [user, role, router]);
 
   return (
     <View style={styles.container}>

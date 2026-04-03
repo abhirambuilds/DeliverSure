@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { supabase } from '@/src/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import { useFocusEffect } from 'expo-router';
 
 const UI = {
   primary: '#16A34A',
@@ -20,26 +21,29 @@ export default function ClaimsScreen() {
   const [claims, setClaims] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchClaims = useCallback(async () => {
     if (!user?.id) return;
-    const fetchClaims = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('claims')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-        if (error) throw error;
-        setClaims(data || []);
-      } catch (err) {
-        console.error("Fetch claims error:", err);
-        setClaims([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchClaims();
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('claims')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setClaims(data || []);
+    } catch (err) {
+      console.error("Fetch claims error:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchClaims();
+    }, [fetchClaims])
+  );
 
   const getStatusDetails = (status: any) => {
     const s = status?.toLowerCase() || '';

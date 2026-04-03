@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import api from '@/src/services/api';
+import { supabase } from '@/src/lib/supabase';
 
 const UI = {
   primary: '#16A34A',
@@ -21,8 +21,13 @@ export default function AdminClaimsScreen() {
   const fetchClaims = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/admin/claims');
-      setClaims(res.data.claims || []);
+      const { data, error } = await supabase
+        .from('claims')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setClaims(data || []);
     } catch (err) {
       console.error("Fetch claims error:", err);
     } finally {
@@ -41,7 +46,12 @@ export default function AdminClaimsScreen() {
 
   const handleApprove = async (id: string) => {
     try {
-      await api.post(`/admin/claims/approve/${id}`);
+      const { error } = await supabase
+        .from('claims')
+        .update({ claim_status: 'approved' })
+        .eq('id', id);
+        
+      if (error) throw error;
       fetchClaims();
     } catch (e) {
       console.error("Approve error", e);

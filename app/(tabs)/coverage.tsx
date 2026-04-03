@@ -6,58 +6,68 @@ import { t } from "@/utils/translations";
 import { supabase } from "@/src/lib/supabase";
 
 export default function CoverageScreen() {
-  const { user, language } = useAuth();
+  const { user, language, refreshUser } = useAuth();
   const router = useRouter();
   const [policy, setPolicy] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    const fetchPolicy = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('coverage_policies')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('policy_status', 'active')
-          .single();
-        setPolicy(error ? null : data);
-      } catch {
-        setPolicy(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPolicy();
-  }, [user?.id]);
+  const activePolicies = user?.activeCoverages || [];
+  const totalProtected = activePolicies.reduce((sum, p) => sum + (p.price * 50 || 1000), 0);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <Text style={styles.header}>{t(language, "myCoverage")}</Text>
+      
       <View style={styles.summaryCard}>
         <Text style={styles.summaryLabel}>{t(language, "totalProtected")}</Text>
-        <Text style={styles.summaryValue}>{policy ? `₹${policy.coverage_amount}` : "₹0"}</Text>
+        <Text style={styles.summaryValue}>₹{totalProtected}</Text>
       </View>
-      <Text style={styles.sectionTitle}>{t(language, "activePolicies")}</Text>
-      {loading ? (
-        <ActivityIndicator color="#16A34A" size="large" style={{ marginTop: 40 }} />
-      ) : !policy ? (
+
+      <Text style={styles.sectionTitle}>{t(language, "activePolicies")} ({activePolicies.length})</Text>
+      
+      {activePolicies.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>No active coverage yet.</Text>
+          <Text style={styles.emptyStateText}>No active coverage yet. Protect your income today.</Text>
         </View>
       ) : (
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>{policy.risk_zone} Coverage</Text>
-            <View style={styles.badgeActive}><Text style={styles.badgeTextActive}>Active</Text></View>
+        activePolicies.map((policy) => (
+          <View key={policy.id} style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>{policy.name}</Text>
+              <View style={styles.badgeActive}><Text style={styles.badgeTextActive}>Active</Text></View>
+            </View>
+            <Text style={styles.policyDetail}>Policy #{policy.id?.slice(0, 8).toUpperCase()}</Text>
+            <Text style={styles.policyDetail}>Weekly Parametric Protection</Text>
+            <View style={styles.divider} />
+            <View style={styles.flexRow}>
+              <Text style={styles.label}>Weekly Premium</Text>
+              <Text style={styles.value}>₹{policy.price}</Text>
+            </View>
+            <View style={styles.flexRow}>
+              <Text style={styles.label}>Max Payout</Text>
+              <Text style={[styles.value, { color: '#16A34A' }]}>₹{policy.price * 50 || 1000}</Text>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.deactivateButton} 
+              onPress={async () => {
+                try {
+                  const { error } = await supabase
+                    .from('coverage_policies')
+                    .update({ policy_status: 'canceled' })
+                    .eq('id', policy.id);
+                  if (error) throw error;
+                  await refreshUser();
+                  alert(`${policy.name} Deactivated`);
+                } catch (err) {
+                  alert("Failed to deactivate coverage");
+                }
+              }}
+            >
+              <Text style={styles.deactivateButtonText}>Stop {policy.name}</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.policyDetail}>Policy #{policy.id?.slice(0, 8)}</Text>
-          <Text style={styles.policyDetail}>{policy.start_date} to {policy.end_date}</Text>
-          <View style={styles.divider} />
-          <View style={styles.flexRow}><Text style={styles.label}>Weekly Premium</Text><Text style={styles.value}>₹{policy.weekly_premium}</Text></View>
-          <View style={styles.flexRow}><Text style={styles.label}>Coverage Amount</Text><Text style={styles.value}>₹{policy.coverage_amount}</Text></View>
-          <View style={styles.flexRow}><Text style={styles.label}>Zone</Text><Text style={styles.value}>{policy.risk_zone}</Text></View>
-        </View>
+        ))
       )}
       <TouchableOpacity style={styles.addButton} onPress={() => router.push("/coverage/select")}>
         <Text style={styles.addButtonText}>{t(language, "addNewCoverage")}</Text>
@@ -88,4 +98,6 @@ const styles = StyleSheet.create({
   addButtonText: { color: '#16A34A', fontSize: 18, fontWeight: "bold" },
   emptyState: { padding: 32, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', alignItems: "center", marginBottom: 16 },
   emptyStateText: { color: '#64748B', fontSize: 16, textAlign: "center" },
+  deactivateButton: { marginTop: 20, height: 48, borderRadius: 10, backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center' },
+  deactivateButtonText: { color: '#EF4444', fontSize: 16, fontWeight: 'bold' }
 });

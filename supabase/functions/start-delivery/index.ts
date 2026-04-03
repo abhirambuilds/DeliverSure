@@ -1,128 +1,146 @@
-// Supabase Edge Function: start-delivery
-// Deploy with: supabase functions deploy start-delivery
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const DEMO_MODE = Deno.env.get("DEMO_MODE") === "true";
-const OPENWEATHER_API_KEY = Deno.env.get("OPENWEATHER_API_KEY") || "";
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-
-async function getWeather(lat: number, lng: number): Promise<{ rain: boolean; temp: number; condition: string }> {
-  try {
-    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${OPENWEATHER_API_KEY}&units=metric`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-    if (!res.ok) throw new Error("Weather API failed");
-    const data = await res.json();
-    const condition = data?.weather?.[0]?.main || "Clear";
-    const rainVol = data?.rain?.["1h"] || 0;
-    const temp = data?.main?.temp || 25;
-    const isRaining = condition.toLowerCase().includes("rain") || rainVol > 0;
-    return { rain: isRaining, temp, condition };
-  } catch {
-    // Fallback: random for demo reliability, conservative for production
-    return { rain: DEMO_MODE ? true : Math.random() > 0.5, temp: 28, condition: "Fallback" };
-  }
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { status: 200, headers: corsHeaders });
   }
 
   try {
-    const { user_id, lat, lng } = await req.json();
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const body = await req.json();
+    const { user_id, lat, lng, trigger_scenario } = body;
+    console.log(`Processing delivery for user: ${user_id}, scenario: ${trigger_scenario}`);
 
-    // 1. Check for active policy
-    const today = new Date().toISOString().split("T")[0];
-    const { data: policies } = await supabase
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // 1. Get active policy
+    const { data: policies, error: policyErr } = await supabase
       .from("coverage_policies")
       .select("*")
       .eq("user_id", user_id)
-      .eq("policy_status", "active")
-      .gte("end_date", today);
+      .eq("policy_status", "active");
 
-    if (!policies || policies.length === 0) {
-      return new Response(JSON.stringify({
-        status: "No active coverage",
-        claim_created: false,
-        payout: 0,
-        weather: { rain_status: false, zone: "None" }
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const policy = policies?.[0];
+    console.log(`Active policy found: ${policy?.id || 'None'}`);
+
+    // 2. Weather check via WeatherAPI.com
+    const apiKey = Deno.env.get("WEATHERAPI_KEY");
+    let is_raining = false;
+    let temperature = 28;
+    let condition = "Clear";
+    let city = "Unknown City";
+
+    try {
+      const weatherRes = await fetch(
+        `http://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${lat},${lng}`
+      );
+      const weatherData = await weatherRes.json();
+      
+      temperature = weatherData.current?.temp_c || 28;
+      condition = weatherData.current?.condition?.text || "Clear";
+      city = weatherData.location?.name || "Target Zone";
+      
+      const weatherCode = weatherData.current?.condition?.code;
+      is_raining = [1063, 1150, 1153, 1180, 1183, 1186, 1189, 1192, 1195, 1240, 1243, 1246].includes(weatherCode);
+      console.log(`Weather at ${city}: ${condition}, ${temperature}C, Raining: ${is_raining}`);
+    } catch (err) {
+      console.error("WeatherAPI fetch error:", err);
     }
 
-    const policy = policies[0];
+    // 3. Scenario Triggers
+    let eventType = "none";
+    let reasonText = "";
+    let shouldTrigger = false;
 
-    // 2. Get weather
-    const weatherData = await getWeather(lat || 0, lng || 0);
-    let isRaining = weatherData.rain;
-
-    // 3. Demo mode override
-    if (!isRaining && DEMO_MODE) {
-      isRaining = true;
-      weatherData.condition = "Simulated Rain (Demo)";
+    if (trigger_scenario === 'rain') {
+      shouldTrigger = true;
+      eventType = "rain";
+      reasonText = "Simulated Rain Disruption (Demo)";
+      is_raining = true;
+      condition = "Heavy Rain";
+    } else if (trigger_scenario === 'heat') {
+      shouldTrigger = true;
+      eventType = "heat";
+      reasonText = "Simulated Heat Wave Disruption (Demo)";
+      temperature = 42;
+      condition = "Extreme Heat";
+    } else if (is_raining) {
+      shouldTrigger = true;
+      eventType = "rain";
+      reasonText = "Automatic rain detection payout";
     }
 
-    if (!isRaining) {
+    if (!shouldTrigger || !policy) {
+      console.log("No claim triggered (no risk detected or no policy found).");
       return new Response(JSON.stringify({
-        status: "No disruption",
-        claim_created: false,
-        payout: 0,
-        rain: false,
-        weather: { rain_status: false, zone: "Delivery Zone", condition: weatherData.condition, temp: weatherData.temp }
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        success: true,
+        weather: { rain_status: is_raining, condition: condition, temp: temperature, city: city }
+      }), { 
+        status: 200, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
     }
 
     // 4. Create disruption event
-    const { data: disruption } = await supabase.from("disruption_events").insert({
-      event_type: "rain",
-      zone: "Zone_GPS",
-      severity: "high",
-      observed_value: 150,
-      event_status: "active",
-      source: "gps_tracker",
-    }).select().single();
+    console.log("Triggering claim process...");
+    const { data: event, error: eventErr } = await supabase
+      .from("disruption_events")
+      .insert({
+        event_type: eventType,
+        zone: city,
+        severity: "high",
+        source: "weather_api"
+      })
+      .select()
+      .single();
+
+    if (eventErr) throw new Error(`Event Insert Error: ${eventErr.message}`);
+    console.log(`Event created: ${event.id}`);
 
     // 5. Create claim
-    const { data: claim } = await supabase.from("claims").insert({
-      user_id,
-      policy_id: policy.id,
-      trigger_event_id: disruption?.id,
-      claim_type: "Parametric Rain Protection",
-      claim_status: "pending",
-      payout_amount: 500,
-      reason: "Heavy Rain",
-    }).select().single();
+    const claimTitle = eventType === 'rain' ? 'Rain Protection' : 'Heat Protection';
+    const { data: claim, error: claimErr } = await supabase
+      .from("claims")
+      .insert({
+        user_id,
+        policy_id: policy.id,
+        trigger_event_id: event.id,
+        claim_type: claimTitle,
+        claim_status: "paid",
+        payout_amount: 500,
+        reason: reasonText
+      })
+      .select()
+      .single();
 
-    // 6. Auto-process claim (pending → approved → paid)
-    setTimeout(async () => {
-      await supabase.from("claims").update({ claim_status: "approved" }).eq("id", claim.id);
-      setTimeout(async () => {
-        await supabase.from("claims").update({ claim_status: "paid" }).eq("id", claim.id);
-      }, 2000);
-    }, 2000);
+    if (claimErr) throw new Error(`Claim Insert Error: ${claimErr.message}`);
+    console.log(`Claim created and paid: ${claim.id}`);
 
     return new Response(JSON.stringify({
-      status: "rain_triggered",
-      rain: true,
+      success: true,
       claim_created: true,
       payout: 500,
-      weather: { rain_status: true, zone: "Zone_GPS", condition: weatherData.condition, temp: weatherData.temp },
-      claim: { id: claim.id, payout_amount: 500 }
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      claim: claim,
+      weather: { rain_status: is_raining, condition: condition, temp: temperature, city: city }
+    }), { 
+      status: 200, 
+      headers: { ...corsHeaders, "Content-Type": "application/json" } 
+    });
 
-  } catch (err) {
-    console.error("start-delivery error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
+  } catch (err: any) {
+    console.error("Critical Function Error:", err.message);
+    return new Response(JSON.stringify({ error: err.message }), { 
+      status: 200, // Return 200 with error to handle gracefully on frontend
+      headers: { ...corsHeaders, "Content-Type": "application/json" } 
     });
   }
 });
