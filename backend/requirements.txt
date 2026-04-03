@@ -1,9 +1,10 @@
-﻿fastapi
+fastapi
 uvicorn
 supabase
 requests
 python-dotenv
 httpx
 apscheduler
-pydantic
+pydantic[email]
+email-validator
 python-jose[cryptography]

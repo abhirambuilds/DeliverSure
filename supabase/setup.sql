@@ -5,6 +5,7 @@
 -- 1. Create Profiles Table (Linked to Supabase Auth)
 CREATE TABLE profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email TEXT UNIQUE,
     full_name TEXT NOT NULL,
     phone_number TEXT,
     city TEXT,
