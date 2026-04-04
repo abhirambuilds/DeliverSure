@@ -105,6 +105,7 @@ export default function HomeScreen() {
   }, [isRideActive]);
 
   const handleStartRide = async () => {
+    if (!user) return;
     if (user?.role === 'admin') {
       Alert.alert("Admin Mode", "Admins cannot start delivery rides.");
       return;
@@ -137,23 +138,29 @@ export default function HomeScreen() {
       if (newCount === 3 && hasRainCover) forceTrigger = 'rain';
       if (newCount === 5 && hasHeatCover) forceTrigger = 'heat';
 
-      const { data, error } = await supabase.functions.invoke('start-delivery', {
-        body: {
-          user_id: user?.id,
-          lat: loc.coords.latitude,
-          lng: loc.coords.longitude,
-          trigger_scenario: forceTrigger
-        },
-      });
+      let functionData = null;
+      try {
+        const { data, error } = await supabase.functions.invoke('start-delivery', {
+          body: {
+            user_id: user?.id,
+            lat: loc.coords.latitude,
+            lng: loc.coords.longitude,
+            trigger_scenario: forceTrigger
+          },
+        });
+        if (error) throw error;
+        functionData = data;
+      } catch (e) {
+        console.log("Function error:", e);
+        throw e;
+      }
 
-      if (error) throw error;
+      setWeatherStatus(functionData.weather);
 
-      setWeatherStatus(data.weather);
-
-      if (data.claim_created && data.claim?.id) {
+      if (functionData.claim_created && functionData.claim?.id) {
         setAutoClaimStatus(true);
-        setPayoutAmount(data.payout || 500);
-        setPayoutState(data.claim.claim_status || 'pending');
+        setPayoutAmount(functionData.payout || 500);
+        setPayoutState(functionData.claim.claim_status || 'pending');
         
         // Immediate sync to avoid re-login requirement
         await refreshUser();
@@ -170,10 +177,10 @@ export default function HomeScreen() {
         ]).start();
 
         supabase
-          .channel(`claim-${data.claim.id}`)
+          .channel(`claim-${functionData.claim.id}`)
           .on(
             'postgres_changes',
-            { event: 'UPDATE', schema: 'public', table: 'claims', filter: `id=eq.${data.claim.id}` },
+            { event: 'UPDATE', schema: 'public', table: 'claims', filter: `id=eq.${functionData.claim.id}` },
             (payload) => {
               const newStatus = payload.new.claim_status;
               if (newStatus === 'approved' || newStatus === 'paid') {

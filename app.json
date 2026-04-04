@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "WeatherShieldApp",
+    "name": "DELIVERSUREAPP",
     "slug": "WeatherShieldApp",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -81,7 +81,9 @@
       "router": {},
       "eas": {
         "projectId": "e7bf6862-6b4c-4e78-86df-317d19bd0138"
-      }
+      },
+      "SUPABASE_URL": "https://rewvcdogpewqhzytenet.supabase.co",
+      "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJld3ZjZG9ncGV3cWh6eXRlbmV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNTE3MjQsImV4cCI6MjA5MDcyNzcyNH0.uFikOFYtR4lHg6zzPGKac48L4IhWwCmUewPUbeOmleI"
     }
   }
 }

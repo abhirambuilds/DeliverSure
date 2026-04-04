@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator, Modal } from "react-native";
+import Constants from "expo-constants";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -26,13 +27,13 @@ export default function AdminDashboardScreen() {
     try {
       const { data, error } = await supabase.functions.invoke('admin-stats', {
         headers: {
-          apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
+          apikey: Constants.expoConfig?.extra?.SUPABASE_ANON_KEY!
         }
       });
       if (error) throw error;
       setStats(data);
-    } catch (err) {
-      console.error("Admin dashboard fetch error:", err);
+    } catch (e) {
+      console.log("Function error:", e);
     } finally {
       setLoading(false);
     }

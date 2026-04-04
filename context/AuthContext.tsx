@@ -78,11 +78,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        await loadProfile(session.user.id, session.user.email || '');
-      } else {
-        setUser(null);
-        setRole(null);
+      try {
+        if (session?.user) {
+          await loadProfile(session.user.id, session.user.email || '');
+        } else {
+          setUser(null);
+          setRole(null);
+        }
+      } catch (e) {
+        console.log("Auth error:", e);
       }
     });
     return () => subscription.unsubscribe();
@@ -158,16 +162,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    setHasPromptedLocation(false);
-    // onAuthStateChange will call loadProfile automatically
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      setHasPromptedLocation(false);
+      // onAuthStateChange will call loadProfile automatically
+    } catch (e) {
+      console.log("Auth error:", e);
+      throw e;
+    }
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setRole(null);
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setRole(null);
+    } catch (e) {
+      console.log("Auth error:", e);
+    }
   };
 
   const updateUser = (data: Partial<User>) => {
@@ -182,8 +195,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isRideActive, setIsRideActive, hasPromptedLocation, setHasPromptedLocation,
       payoutModalVisible, setPayoutModalVisible, deliveryCount, setDeliveryCount,
       cumulativeDistance, setCumulativeDistance, refreshUser: async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) await loadProfile(session.user.id, session.user.email || '');
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) await loadProfile(session.user.id, session.user.email || '');
+        } catch (e) {
+          console.log("Auth error:", e);
+        }
       }
     }}>
       {children}
